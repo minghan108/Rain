@@ -1,14 +1,20 @@
 package rain.com.rain;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
+
+import static rain.com.rain.SimpleMovingAverageExample.outputText;
 
 public class MainActivity extends AppCompatActivity {
     KlinesManager klinesManager = new KlinesManager();
@@ -16,6 +22,7 @@ public class MainActivity extends AppCompatActivity {
     TextView reverseRateTextView;
     String TAG = "MainActivity";
     Timer timer;
+    private List<String> symbolsList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,8 +45,36 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume(){
         super.onResume();
-        resendKlinesRequest();
+        sendGetSymbolsRequest();
+        //sendCurrentPriceRequest();
+        //resendKlinesRequest();
         //sendKlinesRequest(localToGMTOffset());
+        //sendDefKlinesRequest(symbol);
+    }
+
+    private void sendDefKlinesRequest(String symbol) {
+        final KlinesListener klinesListener = new KlinesListener() {
+            @Override
+            public void onSuccess() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        rateTextView.setText(outputText);
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(String response) {
+                displayFailMessage(response);
+            }
+
+            @Override
+            public void repeatKlinesRequest(long utcTimestamp) {
+            }
+        };
+
+        klinesManager.sendDefaultKlinesRequest(klinesListener, symbol);
     }
 
     private void sendKlinesRequest(long utcTimestampOffset) {
@@ -61,6 +96,28 @@ public class MainActivity extends AppCompatActivity {
         };
 
         klinesManager.sendKlinesRequest(klinesListener, utcTimestampOffset);
+
+    }
+
+    private void sendGetSymbolsRequest() {
+        final SymbolsListener symbolsListener = new SymbolsListener() {
+
+            @Override
+            public void onSuccess(List<String> symbols) {
+                symbolsList = symbols;
+
+                for(String symbol : symbolsList){
+                    sendDefKlinesRequest(symbol);
+                }
+            }
+
+            @Override
+            public void onFailure(String response) {
+
+            }
+        };
+
+        klinesManager.sendGetSymbolsRequest(symbolsListener);
 
     }
 
@@ -109,5 +166,30 @@ public class MainActivity extends AppCompatActivity {
             }
 
         }, 0, 10000);
+    }
+
+    public void displayFailMessage(final String failMessage){
+        this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (!isFinishing()) {
+                    AlertDialog.Builder builder1 = new AlertDialog.Builder(MainActivity.this);
+                    builder1.setMessage(failMessage);
+                    builder1.setCancelable(true);
+
+                    builder1.setPositiveButton(
+                            "Dismiss",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    dialog.cancel();
+                                }
+                            });
+
+                    AlertDialog alert11 = builder1.create();
+                    alert11.show();
+                }
+            }
+        });
+
     }
 }

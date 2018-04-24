@@ -3,7 +3,9 @@ package rain.com.rain;
 import android.util.Log;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import static rain.com.rain.MainActivity.localToGMTOffset;
 
@@ -66,7 +68,7 @@ public class KlinesManager {
                         sem.sem_post();
                     }
                 };
-                String symbol = "ETCBTC";
+                String symbol = "EOSETH";
                 (new OkHttpConnection()).getResponse(getGetKlinesUrl(symbol, utcTimestampOffset), httpListener, "");
                 sem.sem_wait();
             }
@@ -110,4 +112,76 @@ public class KlinesManager {
     }
 
 
+    public void sendDefaultKlinesRequest(final KlinesListener klinesListener, final String symbol) {
+        SafeThread sendGetAllPlayableContentRequestThread = new SafeThread("sendGetAllPlayableContentRequestThread") {
+            @Override
+            protected void runSafe() {
+                KlinesListener listener = klinesListener;
+                final Semaphore sem = new Semaphore();
+                sem.sem_open();
+                OnOkhttpProcessFinish httpListener = new OnOkhttpProcessFinish() {
+                    @Override
+                    public void onHttpEvent(String response) {
+                        handleGetDefaultKlinesResponseFromServer(response, klinesListener, symbol);
+                        sem.sem_post();
+                    }
+
+                    @Override
+                    public void onHttpFailure(String response) {
+                        Log.d(TAG, "sendGetAllPlayableContentRequest onFailure");
+                        handleOnFailure(response, klinesListener);
+                        sem.sem_post();
+                    }
+                };
+                (new OkHttpConnection()).getResponse(getGetDefaultKlinesUrl(symbol), httpListener, "");
+                sem.sem_wait();
+            }
+        };
+
+        sendGetAllPlayableContentRequestThread.start();
+    }
+
+    private void handleGetDefaultKlinesResponseFromServer(String response, KlinesListener klinesListener, String symbol) {
+        parser.parseDefaultKlinesJsonResponse(response, klinesListener, symbol);
+    }
+
+    private String getGetDefaultKlinesUrl(String symbol) {
+        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=110";
+    }
+
+    public void sendGetSymbolsRequest(final SymbolsListener symbolsListener) {
+        SafeThread sendGetAllPlayableContentRequestThread = new SafeThread("sendGetAllPlayableContentRequestThread") {
+            @Override
+            protected void runSafe() {
+                SymbolsListener listener = symbolsListener;
+                final Semaphore sem = new Semaphore();
+                sem.sem_open();
+                OnOkhttpProcessFinish httpListener = new OnOkhttpProcessFinish() {
+                    @Override
+                    public void onHttpEvent(String response) {
+                        handleGetSymbolsResponseFromServer(response, symbolsListener);
+                        sem.sem_post();
+                    }
+
+                    @Override
+                    public void onHttpFailure(String response) {
+                        Log.d(TAG, "sendGetAllPlayableContentRequest onFailure");
+                        symbolsListener.onFailure(response);
+                        sem.sem_post();
+                    }
+                };
+                (new OkHttpConnection()).getResponse(getGetPriceUrl(), httpListener, "");
+                sem.sem_wait();
+            }
+        };
+
+        sendGetAllPlayableContentRequestThread.start();
+    }
+
+    private void handleGetSymbolsResponseFromServer(String response, SymbolsListener symbolsListener) {
+        List<String> symbols = new ArrayList<>();
+
+        symbols = parser.parseSymbolsJsonResponse(response);
+        symbolsListener.onSuccess(symbols);
+    }
 }

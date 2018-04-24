@@ -10,12 +10,14 @@ import org.w3c.dom.Node;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -144,13 +146,33 @@ public class Parser {
             klinesListener.repeatKlinesRequest(utcTimeStamp + 1800000L);
         } else {
             klinesListener.onSuccess();
-            calculateSma();
+            //calculateSma();
             Log.d(TAG, "hunDayPriceAvg: " + hunDayPriceAvg/klinesLinkedList.size());
         }
 
     }
 
-    private void calculateSma() {
+    public void parseDefaultKlinesJsonResponse(String response, KlinesListener klinesListener, String symbol){
+
+        try {
+            JSONArray jsonArray = new JSONArray(response);
+            Log.d(TAG, "jsonArray length: " + jsonArray.length());
+            for (int i = 0; i < jsonArray.length(); i++) {
+                //Log.d(TAG, "jsonArray: " + jsonArray.getJSONArray(i).toString());
+                //Log.d(TAG, "jsonArray closing price: " + jsonArray.getJSONArray(i).get(1).toString());
+                klinesLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString()));
+            }
+
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        calculateSma(symbol, klinesListener);
+
+    }
+
+    private void calculateSma(String symbol, KlinesListener klinesListener) {
 //        double hundredDayPriceAvg = 0;
 //        double twentyFiveDayPriceAvg = 0;
 //        double sevenDayPriceAvg = 0;
@@ -179,15 +201,37 @@ public class Parser {
 //        Log.d(TAG, "hundredDayPriceAvg: " + hundredDayPriceAvg);
 //        Log.d(TAG, "twentyFiveDayPriceAvg: " + twentyFiveDayPriceAvg);
 //        Log.d(TAG, "sevenDayPriceAvg: " + sevenDayPriceAvg);
-        SimpleMovingAverageExample simpleSMA = new SimpleMovingAverageExample();
+        SimpleMovingAverageExample simpleSMA = new SimpleMovingAverageExample(symbol);
         Double[] closePriceArray = klinesLinkedList.toArray(new Double[klinesLinkedList.size()]);
         double[] d = ArrayUtils.toPrimitive(closePriceArray);
-        double[] tfArray = Arrays.copyOfRange(d, d.length - 337, d.length - 1);
-        simpleSMA.calculateSimpleMovingAverage(tfArray);
+        ArrayUtils.reverse(d);
+        simpleSMA.calculateSimpleMovingAverage(d, klinesListener);
     }
 
     public static long localToGMT() {
         return (new Date().getTime());
+    }
+
+    public List<String> parseSymbolsJsonResponse(String response) {
+        List<String> symbolList = new ArrayList<>();
+        JSONArray jsonArray = null;
+        try {
+            jsonArray = new JSONArray(response);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+
+            try {
+                String symbol = jsonArray.getJSONObject(i).getString("symbol");
+                symbolList.add(symbol);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return symbolList;
     }
 }
 
