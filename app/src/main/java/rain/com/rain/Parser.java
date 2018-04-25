@@ -33,6 +33,7 @@ public class Parser {
     public static LinkedList<HashMap<String, String>> currentPriceHashMapLinkedList = new LinkedList<>();
     private LinkedList<Double> klinesLinkedList = new LinkedList<>();
     private double hunDayPriceAvg = 0;
+    private SimpleMovingAverageExample simpleSMA = new SimpleMovingAverageExample();
 
 
     public rain.com.rain.SortedMap parseCurrentPriceJsonResponse(String response) throws IOException {
@@ -174,39 +175,10 @@ public class Parser {
     }
 
     private void calculateSma(String symbol, KlinesListener klinesListener) {
-//        double hundredDayPriceAvg = 0;
-//        double twentyFiveDayPriceAvg = 0;
-//        double sevenDayPriceAvg = 0;
-//
-//        int priceIndex = 1;
-//        int periodIndex = 1;
-//        for(Double price : klinesLinkedList){
-//            hundredDayPriceAvg += price;
-//
-//            if (priceIndex >= (klinesLinkedList.size() - 1200)){
-//                twentyFiveDayPriceAvg += price;
-//            }
-//
-//            if (priceIndex >= (klinesLinkedList.size() - 336)){
-//                sevenDayPriceAvg += price;
-//            }
-//
-//            priceIndex += 1;
-//        }
-//        Log.d(TAG, "hundredDayTotal: " + hundredDayPriceAvg);
-//
-//        hundredDayPriceAvg = hundredDayPriceAvg/klinesLinkedList.size();
-//        twentyFiveDayPriceAvg = twentyFiveDayPriceAvg/1200;
-//        sevenDayPriceAvg = sevenDayPriceAvg/336;
-//        Log.d(TAG, "klinesLinkedList.size: " + klinesLinkedList.size());
-//        Log.d(TAG, "hundredDayPriceAvg: " + hundredDayPriceAvg);
-//        Log.d(TAG, "twentyFiveDayPriceAvg: " + twentyFiveDayPriceAvg);
-//        Log.d(TAG, "sevenDayPriceAvg: " + sevenDayPriceAvg);
-        SimpleMovingAverageExample simpleSMA = new SimpleMovingAverageExample(symbol);
         Double[] closePriceArray = klinesLinkedList.toArray(new Double[klinesLinkedList.size()]);
         double[] d = ArrayUtils.toPrimitive(closePriceArray);
         ArrayUtils.reverse(d);
-        simpleSMA.calculateSimpleMovingAverage(d, klinesListener);
+        simpleSMA.calculateSimpleMovingAverage(d, klinesListener, symbol);
     }
 
     public static long localToGMT() {

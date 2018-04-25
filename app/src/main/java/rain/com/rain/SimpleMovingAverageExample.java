@@ -10,6 +10,7 @@ import com.tictactec.ta.lib.RetCode;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 public class SimpleMovingAverageExample {
@@ -25,27 +26,33 @@ public class SimpleMovingAverageExample {
     public static final int PERIODS_AVERAGE = 0;
 
     private String TAG = "SimpleMovingAverage ";
-    private String symbol = "";
-    public static String outputText = "";
+    public static String outputTextUptrend = "";
+    public static String outputTextDowntrend = "";
     private List<Integer>  sevenBeginBelowAllIndexList = new ArrayList<>();
+    private String[] symbolsArray = {"BTCUSDT", "LTCUSDT", "BNBUSDT", "ETHUSDT", "BCCUSDT", "ADAUSDT", "QTUMUSDT", "NEOUSDT"};
+    private HashMap<String, String> symbolTrendStateMap = new HashMap<String, String>();
 
     private enum SmaBeginState{
         BEGIN_STATE_SEVEN_BELOW_ALL,
         BEGIN_STATE_SEVEN_BELOW_TWENTYFIVE,
+        BEGIN_STATE_SEVEN_ABOVE_ALL,
         BEGIN_STATE_DEFAULT
     }
 
     private enum SmaEndState{
         END_STATE_SEVEN_ABOVE_ALL,
         END_STATE_SEVEN_BELOW_TWENTYFIVE,
+        END_STATE_SEVEN_BELOW_ANY,
         END_STATE_DEFAULT
     }
 
-    public SimpleMovingAverageExample(String symbol){
-        this.symbol = symbol;
+    public SimpleMovingAverageExample(){
+        for(String symbol : symbolsArray){
+            symbolTrendStateMap.put(symbol, "Default");
+        }
     }
 
-    public void calculateSimpleMovingAverage(double[] closePrice, KlinesListener klinesListener) {
+    public void calculateSimpleMovingAverage(double[] closePrice, KlinesListener klinesListener, String symbol) {
         //double[] closePrice = new double[TOTAL_PERIODS];
         double[] sevenOutArray = new double[closePrice.length];
         double[] twentyFiveOutArray = new double[closePrice.length];
@@ -60,9 +67,9 @@ public class SimpleMovingAverageExample {
 
 
         Core c = new Core();
-        RetCode sevenRetCode = c.sma(0, closePrice.length -1, closePrice, 7, begin, length, sevenOutArray);
-        RetCode twentyFiveRetCode = c.sma(0, closePrice.length -1, closePrice, 25, begin, length, twentyFiveOutArray);
-        RetCode hundredRetCode = c.sma(0, closePrice.length -1, closePrice, 99, begin, length, hundredOutArray);
+        RetCode sevenRetCode = c.sma(0, closePrice.length -1, closePrice, 5, begin, length, sevenOutArray);
+        RetCode twentyFiveRetCode = c.sma(0, closePrice.length -1, closePrice, 8, begin, length, twentyFiveOutArray);
+        RetCode hundredRetCode = c.sma(0, closePrice.length -1, closePrice, 13, begin, length, hundredOutArray);
 
 
         if (sevenRetCode == RetCode.Success && twentyFiveRetCode == RetCode.Success && hundredRetCode == RetCode.Success) {
@@ -87,43 +94,69 @@ public class SimpleMovingAverageExample {
 //
 //            }
 
-//            if (sevenOutArray[4] < twentyFiveOutArray[4] && sevenOutArray[4] < hundredOutArray[4]){
-//                smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_ALL;
-//            } else if (sevenOutArray[4] < twentyFiveOutArray[4] && sevenOutArray[4] > hundredOutArray[4]){
-//                smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_TWENTYFIVE;
+
+            //used to find if current MA is upward cross
+//            for (int i = 48; i >= 0; i--){
+//                if (sevenOutArray[i] < twentyFiveOutArray[i] && sevenOutArray[i] < hundredOutArray[i]){
+//                    smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_ALL;
+//                    sevenBeginBelowAllIndexList.add(i);
+//                } else if (sevenOutArray[i] < twentyFiveOutArray[i] && sevenOutArray[i] > hundredOutArray[i]){
+//                    smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_TWENTYFIVE;
+//                }
+//            }
+//
+//            if (!sevenBeginBelowAllIndexList.isEmpty()){
+//                int scanFromIndex = Collections.min(sevenBeginBelowAllIndexList);
+//
+//                for (int j = scanFromIndex; j >= 0; j--){
+//                    if (sevenOutArray[j] > twentyFiveOutArray[j] && sevenOutArray[j] > hundredOutArray[j]) {
+//                        smaEndState = SmaEndState.END_STATE_SEVEN_ABOVE_ALL;
+//                    } else {
+//                        smaEndState = SmaEndState.END_STATE_DEFAULT;
+//                    }
+//                }
+//
 //            }
 
-            for (int i = 48; i >= 0; i--){
-                if (sevenOutArray[i] < twentyFiveOutArray[i] && sevenOutArray[i] < hundredOutArray[i]){
-                    smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_ALL;
-                    sevenBeginBelowAllIndexList.add(i);
-                } else if (sevenOutArray[i] < twentyFiveOutArray[i] && sevenOutArray[i] > hundredOutArray[i]){
-                    smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_TWENTYFIVE;
-                }
+            if (sevenOutArray[2] < twentyFiveOutArray[2] && sevenOutArray[2] < hundredOutArray[2]) {
+                smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_ALL;
+            } else if (sevenOutArray[2] > twentyFiveOutArray[2] && sevenOutArray[2] > hundredOutArray[2]) {
+                smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_ABOVE_ALL;
+            } else if (sevenOutArray[2] < twentyFiveOutArray[2] && sevenOutArray[2] > hundredOutArray[2]) {
+                smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_TWENTYFIVE;
             }
 
-            if (!sevenBeginBelowAllIndexList.isEmpty()){
-                int scanFromIndex = sevenBeginBelowAllIndexList.get(sevenBeginBelowAllIndexList.indexOf(Collections.min(sevenBeginBelowAllIndexList)));
-
-                for (int j = scanFromIndex; j >= 0; j-- ){
-                    if (sevenOutArray[j] > twentyFiveOutArray[j] && sevenOutArray[j] > hundredOutArray[j]) {
-                        smaEndState = SmaEndState.END_STATE_SEVEN_ABOVE_ALL;
-                    } else {
-                        smaEndState = SmaEndState.END_STATE_DEFAULT;
-                    }
-                }
-
+            if (sevenOutArray[0] > twentyFiveOutArray[0] && sevenOutArray[0] > hundredOutArray[0]) {
+                smaEndState = SmaEndState.END_STATE_SEVEN_ABOVE_ALL;
+            } else if (sevenOutArray[0] < twentyFiveOutArray[0] || sevenOutArray[0] < hundredOutArray[0]){
+                smaEndState = SmaEndState.END_STATE_SEVEN_BELOW_ANY;
             }
 
-//            if (sevenOutArray[0] > twentyFiveOutArray[0] && sevenOutArray[0] > hundredOutArray[0]){
-//                smaEndState = SmaEndState.END_STATE_SEVEN_ABOVE_ALL;
-//            } else if (sevenOutArray[0] < twentyFiveOutArray[0] && sevenOutArray[0] > hundredOutArray[0]){
-//                smaEndState = SmaEndState.END_STATE_SEVEN_BELOW_TWENTYFIVE;
-//            }
-
-            if (smaBeginState == SmaBeginState.BEGIN_STATE_SEVEN_BELOW_ALL && smaEndState == SmaEndState.END_STATE_SEVEN_ABOVE_ALL){
+            if (smaBeginState == SmaBeginState.BEGIN_STATE_SEVEN_BELOW_ALL && smaEndState == SmaEndState.END_STATE_SEVEN_ABOVE_ALL
+                    && !(symbolTrendStateMap.get(symbol).equalsIgnoreCase("Uptrend"))){
+                symbolTrendStateMap.put(symbol, "Uptrend");
                 Log.d(TAG, symbol + " Uptrend Cross");
-                outputText += curTime + " " + symbol + " Uptrend Cross \n";
+                outputTextUptrend = curTime + " " + symbol + " Uptrend Cross \n" + outputTextUptrend;
+            } else if (smaBeginState == SmaBeginState.BEGIN_STATE_SEVEN_ABOVE_ALL && smaEndState == SmaEndState.END_STATE_SEVEN_BELOW_ANY
+                    && !(symbolTrendStateMap.get(symbol).equalsIgnoreCase("Downtrend"))){
+                symbolTrendStateMap.put(symbol, "Downtrend");
+                Log.d(TAG, symbol + "Downtrend Cross");
+                outputTextDowntrend = curTime + " " + symbol + " Downtrend Cross \n" + outputTextDowntrend;
+            } else if (smaBeginState == SmaBeginState.BEGIN_STATE_SEVEN_BELOW_TWENTYFIVE && smaEndState == SmaEndState.END_STATE_SEVEN_ABOVE_ALL
+                    && !(symbolTrendStateMap.get(symbol).equalsIgnoreCase("MidupTrend"))){
+                symbolTrendStateMap.put(symbol, "MidupTrend");
+                Log.d(TAG, symbol + "MidupTrend Cross");
+                outputTextUptrend = curTime + " " + symbol + " MidupTrend Cross \n" + outputTextUptrend;
+            } else if (smaBeginState == SmaBeginState.BEGIN_STATE_SEVEN_ABOVE_ALL && smaEndState == SmaEndState.END_STATE_SEVEN_ABOVE_ALL
+                    && !(symbolTrendStateMap.get(symbol).equalsIgnoreCase("CurrentUptrend"))) {
+                symbolTrendStateMap.put(symbol, "CurrentUptrend");
+                Log.d(TAG, symbol + " CurrentUptrend");
+                outputTextUptrend = curTime + " " + symbol + " CurrentUptrend \n" + outputTextUptrend;
+            } else if (smaBeginState == SmaBeginState.BEGIN_STATE_SEVEN_BELOW_ALL && smaEndState == SmaEndState.END_STATE_SEVEN_BELOW_ANY
+                    && !(symbolTrendStateMap.get(symbol).equalsIgnoreCase("CurrentDowntrend"))) {
+                symbolTrendStateMap.put(symbol, "CurrentDowntrend");
+                Log.d(TAG, symbol + " CurrentDowntrend");
+                outputTextDowntrend = curTime + " " + symbol + " CurrentDowntrend \n" + outputTextDowntrend;
             }
 
             klinesListener.onSuccess();

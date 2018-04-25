@@ -15,7 +15,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
 
-import static rain.com.rain.SimpleMovingAverageExample.outputText;
+import static rain.com.rain.SimpleMovingAverageExample.outputTextUptrend;
+import static rain.com.rain.SimpleMovingAverageExample.outputTextDowntrend;
 
 public class MainActivity extends AppCompatActivity {
     KlinesManager klinesManager = new KlinesManager();
@@ -24,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
     String TAG = "MainActivity";
     Timer timer;
     private List<String> symbolsList = new ArrayList<>();
+    private String[] symbolsArray = {"BTCUSDT", "LTCUSDT", "BNBUSDT", "ETHUSDT", "BCCUSDT", "ADAUSDT", "QTUMUSDT", "NEOUSDT"};
     private int symbolsIndex = 0;
 
     @Override
@@ -34,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
         reverseRateTextView = (TextView)this.findViewById(R.id.ReverseRatesTextView);
         Log.d(TAG, "timestamp: " + localToGMT());
         rateTextView.setMovementMethod(new ScrollingMovementMethod());
+        reverseRateTextView.setMovementMethod(new ScrollingMovementMethod());
     }
 
     public static long localToGMT() {
@@ -48,7 +51,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume(){
         super.onResume();
-        sendGetSymbolsRequest();
+        //sendGetSymbolsRequest();
+        sendDefKlinesRequest(symbolsArray[symbolsIndex]);
         //sendCurrentPriceRequest();
         //resendKlinesRequest();
         //sendKlinesRequest(localToGMTOffset());
@@ -63,15 +67,23 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        rateTextView.setText(outputText);
+                        rateTextView.setText(outputTextUptrend);
+                        reverseRateTextView.setText(outputTextDowntrend);
                     }
                 });
 
-                if (symbolsIndex < symbolsList.size()) {
-                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+//                if (symbolsIndex < symbolsList.size()) {
+//                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+//                } else {
+//                    symbolsIndex = 0;
+//                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+//                }
+
+                if (symbolsIndex < symbolsArray.length) {
+                    sendDefKlinesRequest(symbolsArray[symbolsIndex]);
                 } else {
                     symbolsIndex = 0;
-                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+                    sendDefKlinesRequest(symbolsArray[symbolsIndex]);
                 }
             }
 
