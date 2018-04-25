@@ -153,6 +153,7 @@ public class Parser {
     }
 
     public void parseDefaultKlinesJsonResponse(String response, KlinesListener klinesListener, String symbol){
+        klinesLinkedList.clear();
 
         try {
             JSONArray jsonArray = new JSONArray(response);

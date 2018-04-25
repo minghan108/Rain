@@ -1,10 +1,16 @@
 package rain.com.rain;
 
+import android.icu.text.SimpleDateFormat;
 import android.util.Log;
 
 import com.tictactec.ta.lib.Core;
 import com.tictactec.ta.lib.MInteger;
 import com.tictactec.ta.lib.RetCode;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.List;
 
 public class SimpleMovingAverageExample {
 
@@ -21,6 +27,7 @@ public class SimpleMovingAverageExample {
     private String TAG = "SimpleMovingAverage ";
     private String symbol = "";
     public static String outputText = "";
+    private List<Integer>  sevenBeginBelowAllIndexList = new ArrayList<>();
 
     private enum SmaBeginState{
         BEGIN_STATE_SEVEN_BELOW_ALL,
@@ -47,6 +54,10 @@ public class SimpleMovingAverageExample {
         MInteger length = new MInteger();
         SmaBeginState smaBeginState = SmaBeginState.BEGIN_STATE_DEFAULT;
         SmaEndState smaEndState = SmaEndState.END_STATE_DEFAULT;
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        Calendar cal = Calendar.getInstance();
+        String curTime = sdf.format(cal.getTime());
+
 
         Core c = new Core();
         RetCode sevenRetCode = c.sma(0, closePrice.length -1, closePrice, 7, begin, length, sevenOutArray);
@@ -69,31 +80,53 @@ public class SimpleMovingAverageExample {
 //                Log.d(TAG, line.toString());
 //            }
 
-            for (int i = 0; i < 4; i++){
-                Log.d(TAG, "sevenOutArray: " + sevenOutArray[i]);
-                Log.d(TAG, "twentyFiveOutArray: " + twentyFiveOutArray[i]);
-                Log.d(TAG, "hundredOutArray: " + hundredOutArray[i]);
+//            for (int i = 0; i < 4; i++){
+//                Log.d(TAG, "sevenOutArray: " + sevenOutArray[i]);
+//                Log.d(TAG, "twentyFiveOutArray: " + twentyFiveOutArray[i]);
+//                Log.d(TAG, "hundredOutArray: " + hundredOutArray[i]);
+//
+//            }
+
+//            if (sevenOutArray[4] < twentyFiveOutArray[4] && sevenOutArray[4] < hundredOutArray[4]){
+//                smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_ALL;
+//            } else if (sevenOutArray[4] < twentyFiveOutArray[4] && sevenOutArray[4] > hundredOutArray[4]){
+//                smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_TWENTYFIVE;
+//            }
+
+            for (int i = 48; i >= 0; i--){
+                if (sevenOutArray[i] < twentyFiveOutArray[i] && sevenOutArray[i] < hundredOutArray[i]){
+                    smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_ALL;
+                    sevenBeginBelowAllIndexList.add(i);
+                } else if (sevenOutArray[i] < twentyFiveOutArray[i] && sevenOutArray[i] > hundredOutArray[i]){
+                    smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_TWENTYFIVE;
+                }
+            }
+
+            if (!sevenBeginBelowAllIndexList.isEmpty()){
+                int scanFromIndex = sevenBeginBelowAllIndexList.get(sevenBeginBelowAllIndexList.indexOf(Collections.min(sevenBeginBelowAllIndexList)));
+
+                for (int j = scanFromIndex; j >= 0; j-- ){
+                    if (sevenOutArray[j] > twentyFiveOutArray[j] && sevenOutArray[j] > hundredOutArray[j]) {
+                        smaEndState = SmaEndState.END_STATE_SEVEN_ABOVE_ALL;
+                    } else {
+                        smaEndState = SmaEndState.END_STATE_DEFAULT;
+                    }
+                }
 
             }
 
-            if (sevenOutArray[4] < twentyFiveOutArray[4] && sevenOutArray[4] < hundredOutArray[4]){
-                smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_ALL;
-            } else if (sevenOutArray[4] < twentyFiveOutArray[4] && sevenOutArray[4] > hundredOutArray[4]){
-                smaBeginState = SmaBeginState.BEGIN_STATE_SEVEN_BELOW_TWENTYFIVE;
-            }
-
-            if (sevenOutArray[0] > twentyFiveOutArray[4] && sevenOutArray[4] > hundredOutArray[4]){
-                smaEndState = SmaEndState.END_STATE_SEVEN_ABOVE_ALL;
-            } else if (sevenOutArray[4] < twentyFiveOutArray[4] && sevenOutArray[4] > hundredOutArray[4]){
-                smaEndState = SmaEndState.END_STATE_SEVEN_BELOW_TWENTYFIVE;
-            }
+//            if (sevenOutArray[0] > twentyFiveOutArray[0] && sevenOutArray[0] > hundredOutArray[0]){
+//                smaEndState = SmaEndState.END_STATE_SEVEN_ABOVE_ALL;
+//            } else if (sevenOutArray[0] < twentyFiveOutArray[0] && sevenOutArray[0] > hundredOutArray[0]){
+//                smaEndState = SmaEndState.END_STATE_SEVEN_BELOW_TWENTYFIVE;
+//            }
 
             if (smaBeginState == SmaBeginState.BEGIN_STATE_SEVEN_BELOW_ALL && smaEndState == SmaEndState.END_STATE_SEVEN_ABOVE_ALL){
                 Log.d(TAG, symbol + " Uptrend Cross");
-                outputText += symbol + " Uptrend Cross";
-                klinesListener.onSuccess();
+                outputText += curTime + " " + symbol + " Uptrend Cross \n";
             }
 
+            klinesListener.onSuccess();
         }
         else {
             Log.d(TAG, "Error");

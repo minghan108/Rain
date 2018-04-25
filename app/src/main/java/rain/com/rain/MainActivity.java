@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.widget.TextView;
 
@@ -23,6 +24,7 @@ public class MainActivity extends AppCompatActivity {
     String TAG = "MainActivity";
     Timer timer;
     private List<String> symbolsList = new ArrayList<>();
+    private int symbolsIndex = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
         rateTextView = (TextView)this.findViewById(R.id.RatesTextView);
         reverseRateTextView = (TextView)this.findViewById(R.id.ReverseRatesTextView);
         Log.d(TAG, "timestamp: " + localToGMT());
+        rateTextView.setMovementMethod(new ScrollingMovementMethod());
     }
 
     public static long localToGMT() {
@@ -56,12 +59,20 @@ public class MainActivity extends AppCompatActivity {
         final KlinesListener klinesListener = new KlinesListener() {
             @Override
             public void onSuccess() {
+                symbolsIndex += 1;
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         rateTextView.setText(outputText);
                     }
                 });
+
+                if (symbolsIndex < symbolsList.size()) {
+                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+                } else {
+                    symbolsIndex = 0;
+                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+                }
             }
 
             @Override
@@ -106,9 +117,8 @@ public class MainActivity extends AppCompatActivity {
             public void onSuccess(List<String> symbols) {
                 symbolsList = symbols;
 
-                for(String symbol : symbolsList){
-                    sendDefKlinesRequest(symbol);
-                }
+                sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+
             }
 
             @Override
