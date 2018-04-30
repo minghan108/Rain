@@ -1,5 +1,7 @@
 package rain.com.rain;
 
+import android.os.Build;
+import android.support.annotation.RequiresApi;
 import android.util.JsonReader;
 import android.util.Log;
 
@@ -31,7 +33,10 @@ public class Parser {
     String[] symbolArray;
     private boolean isSymbolArrayInit = false;
     public static LinkedList<HashMap<String, String>> currentPriceHashMapLinkedList = new LinkedList<>();
-    private LinkedList<Double> klinesLinkedList = new LinkedList<>();
+    private LinkedList<Double> klinesHighLinkedList = new LinkedList<>();
+    private LinkedList<Double> klinesLowLinkedList = new LinkedList<>();
+    private LinkedList<Double> klinesCloseLinkedList = new LinkedList<>();
+    private LinkedList<Double> klinesVolumeLinkedList = new LinkedList<>();
     private double hunDayPriceAvg = 0;
     private SimpleMovingAverageExample simpleSMA = new SimpleMovingAverageExample();
 
@@ -133,7 +138,7 @@ public class Parser {
                 //Log.d(TAG, "jsonArray: " + jsonArray.getJSONArray(i).toString());
                 //Log.d(TAG, "jsonArray closing price: " + jsonArray.getJSONArray(i).get(1).toString());
                 //hundredDayPriceAvg += Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString());
-                klinesLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString()));
+                klinesCloseLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString()));
                 utcTimeStamp = Long.parseLong(jsonArray.getJSONArray(i).get(0).toString());
                 hunDayPriceAvg += Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString());
             }
@@ -148,21 +153,24 @@ public class Parser {
         } else {
             klinesListener.onSuccess();
             //calculateSma();
-            Log.d(TAG, "hunDayPriceAvg: " + hunDayPriceAvg/klinesLinkedList.size());
+            Log.d(TAG, "hunDayPriceAvg: " + hunDayPriceAvg/klinesCloseLinkedList.size());
         }
 
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public void parseDefaultKlinesJsonResponse(String response, KlinesListener klinesListener, String symbol){
-        klinesLinkedList.clear();
+        klinesCloseLinkedList.clear();
 
         try {
             JSONArray jsonArray = new JSONArray(response);
             Log.d(TAG, "jsonArray length: " + jsonArray.length());
             for (int i = 0; i < jsonArray.length(); i++) {
                 //Log.d(TAG, "jsonArray: " + jsonArray.getJSONArray(i).toString());
-                //Log.d(TAG, "jsonArray closing price: " + jsonArray.getJSONArray(i).get(1).toString());
-                klinesLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString()));
+                //Log.d(TAG, "jsonArray closing price: " + jsonArray.getJSONArray(i).get(4).toString());
+                klinesHighLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(2).toString()));
+                klinesLowLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(3).toString()));
+                klinesCloseLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString()));
             }
 
 
@@ -174,11 +182,21 @@ public class Parser {
 
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void calculateSma(String symbol, KlinesListener klinesListener) {
-        Double[] closePriceArray = klinesLinkedList.toArray(new Double[klinesLinkedList.size()]);
-        double[] d = ArrayUtils.toPrimitive(closePriceArray);
-        ArrayUtils.reverse(d);
-        simpleSMA.calculateSimpleMovingAverage(d, klinesListener, symbol);
+        Double[] highPriceArray = klinesHighLinkedList.toArray(new Double[klinesHighLinkedList.size()]);
+        Double[] lowPriceArray = klinesLowLinkedList.toArray(new Double[klinesLowLinkedList.size()]);
+        Double[] closePriceArray = klinesCloseLinkedList.toArray(new Double[klinesCloseLinkedList.size()]);
+        Double[] volumePriceArray = klinesVolumeLinkedList.toArray(new Double[klinesVolumeLinkedList.size()]);
+        double[] highPricePrimArray = ArrayUtils.toPrimitive(highPriceArray);
+        double[] lowPricePrimArray = ArrayUtils.toPrimitive(lowPriceArray);
+        double[] closePricePrimArray = ArrayUtils.toPrimitive(closePriceArray);
+        double[] volumePricePrimArray = ArrayUtils.toPrimitive(volumePriceArray);
+        ArrayUtils.reverse(highPricePrimArray);
+        ArrayUtils.reverse(lowPricePrimArray);
+        ArrayUtils.reverse(closePricePrimArray);
+        ArrayUtils.reverse(volumePricePrimArray);
+        simpleSMA.calculateSimpleMovingAverage(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, klinesListener, symbol);
     }
 
     public static long localToGMT() {

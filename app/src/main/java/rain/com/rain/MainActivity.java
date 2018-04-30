@@ -52,7 +52,8 @@ public class MainActivity extends AppCompatActivity {
     public void onResume(){
         super.onResume();
         //sendGetSymbolsRequest();
-        sendDefKlinesRequest(symbolsArray[symbolsIndex]);
+//        sendDefKlinesRequest(symbolsArray[symbolsIndex]);
+        sendDefKlinesRequest("ETHUSDT");
         //sendCurrentPriceRequest();
         //resendKlinesRequest();
         //sendKlinesRequest(localToGMTOffset());
