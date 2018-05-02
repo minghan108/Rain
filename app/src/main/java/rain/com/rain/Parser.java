@@ -39,6 +39,7 @@ public class Parser {
     private LinkedList<Double> klinesVolumeLinkedList = new LinkedList<>();
     private double hunDayPriceAvg = 0;
     private SimpleMovingAverageExample simpleSMA = new SimpleMovingAverageExample();
+    private AdxDmModel adxDmModel = new AdxDmModel();
 
 
     public rain.com.rain.SortedMap parseCurrentPriceJsonResponse(String response) throws IOException {
@@ -192,11 +193,12 @@ public class Parser {
         double[] lowPricePrimArray = ArrayUtils.toPrimitive(lowPriceArray);
         double[] closePricePrimArray = ArrayUtils.toPrimitive(closePriceArray);
         double[] volumePricePrimArray = ArrayUtils.toPrimitive(volumePriceArray);
-        ArrayUtils.reverse(highPricePrimArray);
-        ArrayUtils.reverse(lowPricePrimArray);
-        ArrayUtils.reverse(closePricePrimArray);
-        ArrayUtils.reverse(volumePricePrimArray);
-        simpleSMA.calculateSimpleMovingAverage(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, klinesListener, symbol);
+//        ArrayUtils.reverse(highPricePrimArray);
+//        ArrayUtils.reverse(lowPricePrimArray);
+//        ArrayUtils.reverse(closePricePrimArray);
+//        ArrayUtils.reverse(volumePricePrimArray);
+//        simpleSMA.calculateSimpleMovingAverage(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, klinesListener, symbol);
+        adxDmModel.calculateAdxDm(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, klinesListener, symbol);
     }
 
     public static long localToGMT() {

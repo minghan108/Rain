@@ -61,7 +61,8 @@ public class SimpleMovingAverageExample {
         double[] twentyFiveOutArray = new double[closePrice.length];
         double[] hundredOutArray = new double[closePrice.length];
         double[] adxOutArray = new double[closePrice.length];
-        double[] minusDmOutArray = new double[closePrice.length];
+        double[] minusDiOutArray = new double[closePrice.length];
+        double[] plusDiOutArray = new double[closePrice.length];
         MInteger begin = new MInteger();
         MInteger length = new MInteger();
         SmaBeginState smaBeginState = SmaBeginState.BEGIN_STATE_DEFAULT;
@@ -73,13 +74,32 @@ public class SimpleMovingAverageExample {
 
         Core c = new Core();
         Log.d(TAG, "symbol" + symbol);
-        //RetCode retCode = c.adx(0, closePrice.length - 1, highPrice, lowPrice, closePrice, 14, begin, length, adxOutArray);
-        RetCode retCode = c.minusDI(0, 50, highPrice, lowPrice, closePrice, 14, begin, length, minusDmOutArray);
-        if (retCode == RetCode.Success){
-            for (int i = 0; i < 4; i++) {
-                //Log.d(TAG, "adxOutArray: " + adxOutArray[i]);
-                Log.d(TAG, "minusDmOutArray: " + minusDmOutArray[i]);
+        RetCode adxRetCode = c.adx(0, closePrice.length - 1, highPrice, lowPrice, closePrice, 14, begin, length, adxOutArray);
+        RetCode minusDIRetCode = c.minusDI(0, closePrice.length - 1, highPrice, lowPrice, closePrice, 14, begin, length, minusDiOutArray);
+        RetCode plusDIRetCode = c.plusDI(0, closePrice.length - 1, highPrice, lowPrice, closePrice, 14, begin, length, plusDiOutArray);
+        if (minusDIRetCode == RetCode.Success && plusDIRetCode == RetCode.Success && adxRetCode == RetCode.Success){
+            for (int i = 0; i < minusDiOutArray.length - 1; i++) {
+                Log.d(TAG, "adxOutArray: " + adxOutArray[i]);
+                Log.d(TAG, "minusDmOutArray: " + minusDiOutArray[i]);
+                Log.d(TAG, "plusDmOutArray: " + plusDiOutArray[i]);
             }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //        RetCode sevenRetCode = c.sma(0, closePrice.length -1, closePrice, 5, begin, length, sevenOutArray);
 //        RetCode twentyFiveRetCode = c.sma(0, closePrice.length -1, closePrice, 8, begin, length, twentyFiveOutArray);
 //        RetCode hundredRetCode = c.sma(0, closePrice.length -1, closePrice, 13, begin, length, hundredOutArray);
