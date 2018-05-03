@@ -8,6 +8,12 @@ import com.tictactec.ta.lib.RetCode;
 
 import java.util.ArrayList;
 
+import static rain.com.rain.MainActivity.buyState;
+import static rain.com.rain.MainActivity.currentDiState;
+import static rain.com.rain.MainActivity.initialDiState;
+import static rain.com.rain.MainActivity.isFirstLaunch;
+import static rain.com.rain.MainActivity.isMinusDiGreater;
+
 public class AdxDmModel {
     private String TAG = "SimpleMovingAverage ";
 
@@ -33,6 +39,44 @@ public class AdxDmModel {
         plusDiOutArrayList = removeZeroInArray(plusDiOutArray);
 
         if (minusDIRetCode == RetCode.Success && plusDIRetCode == RetCode.Success && adxRetCode == RetCode.Success){
+            Double plusDi = plusDiOutArrayList.get(plusDiOutArrayList.size() - 1);
+            Double minusDi = minusDiOutArrayList.get(plusDiOutArrayList.size() - 1);
+
+            if(!isMinusDiGreater){
+                if(minusDi > plusDi){
+                    isMinusDiGreater = true;
+                }
+            } else {
+                if(buyState == MainActivity.BuyState.IN_BUY_STATE && (plusDi >= minusDi)){
+                    buyState = MainActivity.BuyState.IN_SELL_STATE;
+                    //TODO: SHOULD NOW BUY
+                } else if (buyState == MainActivity.BuyState.IN_SELL_STATE && (minusDi > plusDi)){
+                    buyState = MainActivity.BuyState.IN_BUY_STATE;
+                    //TODO: SHOULD NOW SELL
+                }
+            }
+
+//            if (isFirstLaunch){
+//                isFirstLaunch = true;
+//
+//                if(plusDi >= minusDi){
+//                    initialDiState = MainActivity.InitialDiState.LAUNCH_PLUSDI_GREATER;
+//                } else {
+//                    initialDiState = MainActivity.InitialDiState.LAUNCH_MINUSDI_GREATER;
+//                }
+//            }
+//
+//            if (!isFirstLaunch){
+//                if (plusDi >= minusDi){
+//                    currentDiState = MainActivity.CurrentDiState.CURRENT_PLUSDI_GREATER;
+//                } else {
+//                    currentDiState = MainActivity.CurrentDiState.CURRENT_MINUSDI_GREATER;
+//                }
+//            }
+//
+//            if (initialDiState == MainActivity.InitialDiState.LAUNCH_PLUSDI_GREATER && currentDiState == MainActivity.CurrentDiState.CURRENT_MINUSDI_GREATER){
+//
+//            }
 //            for (int i = 0; i < minusDiOutArray.length - 1; i++) {
 //                Log.d(TAG, "adxOutArray: " + adxOutArray[i]);
 //                Log.d(TAG, "minusDmOutArray: " + minusDiOutArray[i]);

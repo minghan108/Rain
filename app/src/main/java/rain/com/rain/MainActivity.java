@@ -27,6 +27,27 @@ public class MainActivity extends AppCompatActivity {
     private List<String> symbolsList = new ArrayList<>();
     private String[] symbolsArray = {"BTCUSDT", "LTCUSDT", "BNBUSDT", "ETHUSDT", "BCCUSDT", "ADAUSDT", "QTUMUSDT", "NEOUSDT"};
     private int symbolsIndex = 0;
+    public static enum InitialDiState{
+        LAUNCH_PLUSDI_GREATER,
+        LAUNCH_MINUSDI_GREATER,
+
+    }
+
+    public static enum CurrentDiState{
+        CURRENT_PLUSDI_GREATER,
+        CURRENT_MINUSDI_GREATER
+    }
+
+    public static enum BuyState{
+        IN_BUY_STATE,
+        IN_SELL_STATE
+    }
+    public static boolean isMinusDiGreater = false;
+    public static boolean isFirstLaunch = true;
+    public static boolean canBuy = false;
+    public static InitialDiState initialDiState;
+    public static CurrentDiState currentDiState;
+    public static BuyState buyState = BuyState.IN_BUY_STATE;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
