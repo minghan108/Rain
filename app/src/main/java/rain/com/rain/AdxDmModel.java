@@ -15,10 +15,10 @@ import static rain.com.rain.MainActivity.isFirstLaunch;
 import static rain.com.rain.MainActivity.isMinusDiGreater;
 
 public class AdxDmModel {
-    private String TAG = "SimpleMovingAverage ";
+    private String TAG = "AdxDmModel ";
 
 
-    public void calculateAdxDm(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, KlinesListener klinesListener, String symbol) {
+    public void calculateAdxDi(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, AdxListener adxListener, String symbol) {
         double[] adxOutArray = new double[closePrice.length];
         double[] minusDiOutArray = new double[closePrice.length];
         double[] plusDiOutArray = new double[closePrice.length];
@@ -41,18 +41,31 @@ public class AdxDmModel {
         if (minusDIRetCode == RetCode.Success && plusDIRetCode == RetCode.Success && adxRetCode == RetCode.Success){
             Double plusDi = plusDiOutArrayList.get(plusDiOutArrayList.size() - 1);
             Double minusDi = minusDiOutArrayList.get(plusDiOutArrayList.size() - 1);
+            Log.d(TAG, "plusDi: " + plusDi);
+            Log.d(TAG, "minusDi: " + minusDi);
 
             if(!isMinusDiGreater){
                 if(minusDi > plusDi){
+                    Log.d(TAG, "MinusDiGreater Prereq State True");
                     isMinusDiGreater = true;
+                } else {
+                    Log.d(TAG, "PlusDiGreater Prereq State False");
                 }
             } else {
                 if(buyState == MainActivity.BuyState.IN_BUY_STATE && (plusDi >= minusDi)){
                     buyState = MainActivity.BuyState.IN_SELL_STATE;
                     //TODO: SHOULD NOW BUY
+                    Log.d(TAG, "Now Buy");
+                    adxListener.onBuy();
+
                 } else if (buyState == MainActivity.BuyState.IN_SELL_STATE && (minusDi > plusDi)){
                     buyState = MainActivity.BuyState.IN_BUY_STATE;
                     //TODO: SHOULD NOW SELL
+                    Log.d(TAG, "Now Sell");
+                    adxListener.onSell();
+
+                } else {
+                    Log.d(TAG, "Not Buying or Selling");
                 }
             }
 

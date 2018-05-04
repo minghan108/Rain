@@ -8,6 +8,7 @@ import android.util.Log;
 import org.apache.commons.lang3.ArrayUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 import org.w3c.dom.Node;
 
 import java.io.IOException;
@@ -160,7 +161,7 @@ public class Parser {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    public void parseDefaultKlinesJsonResponse(String response, KlinesListener klinesListener, String symbol){
+    public void parseDefaultKlinesJsonResponse(String response, AdxListener adxListener, String symbol){
         klinesCloseLinkedList.clear();
 
         try {
@@ -179,12 +180,12 @@ public class Parser {
             e.printStackTrace();
         }
 
-        calculateSma(symbol, klinesListener);
+        calculateSma(symbol, adxListener);
 
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    private void calculateSma(String symbol, KlinesListener klinesListener) {
+    private void calculateSma(String symbol, AdxListener adxListener) {
         Double[] highPriceArray = klinesHighLinkedList.toArray(new Double[klinesHighLinkedList.size()]);
         Double[] lowPriceArray = klinesLowLinkedList.toArray(new Double[klinesLowLinkedList.size()]);
         Double[] closePriceArray = klinesCloseLinkedList.toArray(new Double[klinesCloseLinkedList.size()]);
@@ -198,7 +199,10 @@ public class Parser {
 //        ArrayUtils.reverse(closePricePrimArray);
 //        ArrayUtils.reverse(volumePricePrimArray);
 //        simpleSMA.calculateSimpleMovingAverage(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, klinesListener, symbol);
-        adxDmModel.calculateAdxDm(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, klinesListener, symbol);
+
+
+
+        adxDmModel.calculateAdxDi(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
     }
 
     public static long localToGMT() {
@@ -225,6 +229,48 @@ public class Parser {
         }
 
         return symbolList;
+    }
+
+    public void parseSendBuyResponse(String response, BuyListener buyListener) {
+        Log.d(TAG, "BuyResponse: " + response);
+
+        try {
+            JSONObject obj = new JSONObject(response);
+
+            JSONArray jsonArray = obj.getJSONArray("asks");
+            Log.d(TAG, "jsonArray length: " + jsonArray.length());
+            Log.d(TAG, "askPrice JsonArray: " + jsonArray.get(0));
+            jsonArray = (JSONArray)jsonArray.get(0);
+            Log.d(TAG, "askPrice: " + jsonArray.get(0));
+            Double askPriceDouble = Double.parseDouble(jsonArray.get(0).toString());
+            buyListener.onSuccess(askPriceDouble);
+
+
+        } catch (JSONException e) {
+            buyListener.onFailure("Failure when parsing SendBuyResponse");
+            e.printStackTrace();
+        }
+    }
+
+    public void parseSendSellResponse(String response, BuyListener buyListener) {
+        Log.d(TAG, "SellResponse: " + response);
+
+        try {
+            JSONObject obj = new JSONObject(response);
+
+            JSONArray jsonArray = obj.getJSONArray("bids");
+            Log.d(TAG, "jsonArray length: " + jsonArray.length());
+            Log.d(TAG, "askPrice JsonArray: " + jsonArray.get(0));
+            jsonArray = (JSONArray)jsonArray.get(0);
+            Log.d(TAG, "askPrice: " + jsonArray.get(0));
+            Double askPriceDouble = Double.parseDouble(jsonArray.get(0).toString());
+            buyListener.onSuccess(askPriceDouble);
+
+
+        } catch (JSONException e) {
+            buyListener.onFailure("Failure when parsing SendBuyResponse");
+            e.printStackTrace();
+        }
     }
 }
 

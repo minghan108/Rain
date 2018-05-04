@@ -20,6 +20,7 @@ import static rain.com.rain.SimpleMovingAverageExample.outputTextDowntrend;
 
 public class MainActivity extends AppCompatActivity {
     KlinesManager klinesManager = new KlinesManager();
+    BuySellManager buySellManager = new BuySellManager();
     TextView rateTextView;
     TextView reverseRateTextView;
     String TAG = "MainActivity";
@@ -27,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private List<String> symbolsList = new ArrayList<>();
     private String[] symbolsArray = {"BTCUSDT", "LTCUSDT", "BNBUSDT", "ETHUSDT", "BCCUSDT", "ADAUSDT", "QTUMUSDT", "NEOUSDT"};
     private int symbolsIndex = 0;
+
     public static enum InitialDiState{
         LAUNCH_PLUSDI_GREATER,
         LAUNCH_MINUSDI_GREATER,
@@ -48,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
     public static InitialDiState initialDiState;
     public static CurrentDiState currentDiState;
     public static BuyState buyState = BuyState.IN_BUY_STATE;
+    public static Double startMoney = 100.0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,52 +77,124 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         //sendGetSymbolsRequest();
 //        sendDefKlinesRequest(symbolsArray[symbolsIndex]);
-        sendDefKlinesRequest("ETHUSDT");
+        //sendDefKlinesRequest("ETHUSDT");
         //sendCurrentPriceRequest();
         //resendKlinesRequest();
         //sendKlinesRequest(localToGMTOffset());
         //sendDefKlinesRequest(symbol);
+        sendKlinesRequestTimer();
     }
 
-    private void sendDefKlinesRequest(String symbol) {
-        final KlinesListener klinesListener = new KlinesListener() {
-            @Override
-            public void onSuccess() {
-                symbolsIndex += 1;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        rateTextView.setText(outputTextUptrend);
-                        reverseRateTextView.setText(outputTextDowntrend);
-                    }
-                });
-
-//                if (symbolsIndex < symbolsList.size()) {
-//                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+//    private void sendDefKlinesRequest(String symbol) {
+//        final KlinesListener klinesListener = new KlinesListener() {
+//            @Override
+//            public void onSuccess() {
+//                symbolsIndex += 1;
+//                runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        rateTextView.setText(outputTextUptrend);
+//                        reverseRateTextView.setText(outputTextDowntrend);
+//                    }
+//                });
+//
+////                if (symbolsIndex < symbolsList.size()) {
+////                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+////                } else {
+////                    symbolsIndex = 0;
+////                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+////                }
+//
+//                if (symbolsIndex < symbolsArray.length) {
+//                    sendDefKlinesRequest(symbolsArray[symbolsIndex]);
 //                } else {
 //                    symbolsIndex = 0;
-//                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+//                    sendDefKlinesRequest(symbolsArray[symbolsIndex]);
 //                }
+//            }
+//
+//            @Override
+//            public void onFailure(String response) {
+//                displayFailMessage(response);
+//            }
+//
+//            @Override
+//            public void repeatKlinesRequest(long utcTimestamp) {
+//            }
+//        };
+//
+//        klinesManager.sendDefaultKlinesRequest(klinesListener, symbol);
+//    }
 
-                if (symbolsIndex < symbolsArray.length) {
-                    sendDefKlinesRequest(symbolsArray[symbolsIndex]);
-                } else {
-                    symbolsIndex = 0;
-                    sendDefKlinesRequest(symbolsArray[symbolsIndex]);
-                }
+    private void sendDefKlinesRequest(String symbol) {
+        AdxListener adxListener = new AdxListener() {
+            @Override
+            public void onSuccess() {
+
             }
 
             @Override
             public void onFailure(String response) {
-                displayFailMessage(response);
+
             }
 
             @Override
-            public void repeatKlinesRequest(long utcTimestamp) {
+            public void onBuy() {
+                handleBuyOrder();
+            }
+
+            @Override
+            public void onSell() {
+                handleSellOrder();
             }
         };
+        klinesManager.sendDefaultKlinesRequest(adxListener, symbol);
+    }
 
-        klinesManager.sendDefaultKlinesRequest(klinesListener, symbol);
+    private void sendKlinesRequestTimer() {
+        timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask() {
+
+            @Override
+            public void run() {
+                sendDefKlinesRequest("ETHUSDT");
+            }
+
+        }, 0, 3000);
+    }
+
+    private void handleSellOrder() {
+        BuyListener buyListener = new BuyListener() {
+            @Override
+            public void onSuccess(Double price) {
+                Log.d(TAG, "askPrice: " + price);
+                startMoney = startMoney*price;
+                Log.d(TAG, "fiat after sell order: " + startMoney);
+            }
+
+            @Override
+            public void onFailure(String response) {
+                Log.d(TAG, "onFailure: " + response);
+            }
+        };
+        buySellManager.sendSellRequest(buyListener);
+    }
+
+    private void handleBuyOrder() {
+        BuyListener buyListener = new BuyListener() {
+            @Override
+            public void onSuccess(Double price) {
+                Log.d(TAG, "askPrice: " + price);
+                startMoney = startMoney/price;
+                Log.d(TAG, "coin after buy order: " + startMoney);
+            }
+
+            @Override
+            public void onFailure(String response) {
+                Log.d(TAG, "onFailure: " + response);
+            }
+        };
+        buySellManager.sendBuyRequest(buyListener);
     }
 
     private void sendKlinesRequest(long utcTimestampOffset) {

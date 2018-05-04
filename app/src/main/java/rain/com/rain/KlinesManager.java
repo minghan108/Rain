@@ -1,5 +1,7 @@
 package rain.com.rain;
 
+import android.os.Build;
+import android.support.annotation.RequiresApi;
 import android.util.Log;
 
 import java.io.IOException;
@@ -111,25 +113,29 @@ public class KlinesManager {
         klinesListener.onFailure(response);
     }
 
+    public void handleOnFailure(String response, AdxListener adxListener) {
+        Log.d(TAG, "handleOnFailure" + response);
+        adxListener.onFailure(response);
+    }
 
-    public void sendDefaultKlinesRequest(final KlinesListener klinesListener, final String symbol) {
+    public void sendDefaultKlinesRequest(final AdxListener adxListener, final String symbol) {
         SafeThread sendGetAllPlayableContentRequestThread = new SafeThread("sendGetAllPlayableContentRequestThread") {
             @Override
             protected void runSafe() {
-                KlinesListener listener = klinesListener;
+                AdxListener listener = adxListener;
                 final Semaphore sem = new Semaphore();
                 sem.sem_open();
                 OnOkhttpProcessFinish httpListener = new OnOkhttpProcessFinish() {
                     @Override
                     public void onHttpEvent(String response) {
-                        handleGetDefaultKlinesResponseFromServer(response, klinesListener, symbol);
+                        handleGetDefaultKlinesResponseFromServer(response, adxListener, symbol);
                         sem.sem_post();
                     }
 
                     @Override
                     public void onHttpFailure(String response) {
                         Log.d(TAG, "sendGetAllPlayableContentRequest onFailure");
-                        handleOnFailure(response, klinesListener);
+                        handleOnFailure(response, adxListener);
                         sem.sem_post();
                     }
                 };
@@ -141,8 +147,9 @@ public class KlinesManager {
         sendGetAllPlayableContentRequestThread.start();
     }
 
-    private void handleGetDefaultKlinesResponseFromServer(String response, KlinesListener klinesListener, String symbol) {
-        parser.parseDefaultKlinesJsonResponse(response, klinesListener, symbol);
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private void handleGetDefaultKlinesResponseFromServer(String response, AdxListener adxListener, String symbol) {
+        parser.parseDefaultKlinesJsonResponse(response, adxListener, symbol);
     }
 
     private String getGetDefaultKlinesUrl(String symbol) {
