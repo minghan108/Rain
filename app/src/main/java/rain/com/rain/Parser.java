@@ -163,6 +163,8 @@ public class Parser {
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void parseDefaultKlinesJsonResponse(String response, AdxListener adxListener, String symbol){
         klinesCloseLinkedList.clear();
+        klinesHighLinkedList.clear();
+        klinesLowLinkedList.clear();
 
         try {
             JSONArray jsonArray = new JSONArray(response);
