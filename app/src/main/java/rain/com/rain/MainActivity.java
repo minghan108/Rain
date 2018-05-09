@@ -29,10 +29,16 @@ public class MainActivity extends AppCompatActivity {
     private String[] symbolsArray = {"BTCUSDT", "LTCUSDT", "BNBUSDT", "ETHUSDT", "BCCUSDT", "ADAUSDT", "QTUMUSDT", "NEOUSDT"};
     private int symbolsIndex = 0;
 
-    public static enum InitialDiState{
-        LAUNCH_PLUSDI_GREATER,
-        LAUNCH_MINUSDI_GREATER,
+    private static enum InitialDiState{
 
+    }
+
+    public static enum SellRemainderState{
+        NOT_IN_SELL_STATE,
+        SELL_50,
+        SELL_70,
+        SELL_85,
+        SELL_100
     }
 
     public static enum CurrentDiState{
@@ -49,8 +55,12 @@ public class MainActivity extends AppCompatActivity {
     public static boolean canBuy = false;
     public static InitialDiState initialDiState;
     public static CurrentDiState currentDiState;
+    public static SellRemainderState sellRemainderState = SellRemainderState.NOT_IN_SELL_STATE;
     public static BuyState buyState = BuyState.IN_BUY_STATE;
     public static Double startMoney = 100.0;
+    public static Double startCoin = 0.0;
+    public double maxDiDiff = 0.0;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -168,7 +178,28 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(Double price) {
                 Log.d(TAG, "askPrice: " + price);
-                startMoney = startMoney*price;
+                switch(sellRemainderState){
+                    case SELL_50:
+                        startMoney = startCoin * 0.5 * price;
+                        startCoin = startCoin * 0.5;
+                        break;
+                    case SELL_70:
+                        startMoney = startMoney + (startCoin * 0.7 * price);
+                        startCoin = startCoin * 0.3;
+                        break;
+                    case SELL_85:
+                        startMoney = startMoney + (startCoin * 0.85 * price);
+                        startCoin = startCoin * 0.15;
+                        break;
+                    case SELL_100:
+                        startMoney = startMoney + (startCoin * price);
+                        startCoin = 0.0;
+                        sellRemainderState = SellRemainderState.NOT_IN_SELL_STATE;
+                        Log.d(TAG, "fiat after sell all order: " + startMoney);
+                       break;
+                }
+
+
                 Log.d(TAG, "fiat after sell order: " + startMoney);
             }
 
@@ -185,7 +216,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(Double price) {
                 Log.d(TAG, "askPrice: " + price);
-                startMoney = startMoney/price;
+                startCoin = startMoney/price;
+                startMoney = 0.0;
                 Log.d(TAG, "coin after buy order: " + startMoney);
             }
 

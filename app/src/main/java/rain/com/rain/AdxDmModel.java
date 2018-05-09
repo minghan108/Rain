@@ -13,6 +13,7 @@ import static rain.com.rain.MainActivity.currentDiState;
 import static rain.com.rain.MainActivity.initialDiState;
 import static rain.com.rain.MainActivity.isFirstLaunch;
 import static rain.com.rain.MainActivity.isMinusDiGreater;
+import static rain.com.rain.MainActivity.sellRemainderState;
 
 public class AdxDmModel {
     private String TAG = "AdxDmModel ";
@@ -22,6 +23,7 @@ public class AdxDmModel {
         double[] adxOutArray = new double[closePrice.length];
         double[] minusDiOutArray = new double[closePrice.length];
         double[] plusDiOutArray = new double[closePrice.length];
+        double maxDiDiff = 0.0;
         ArrayList<Double> adxOutArrayList = new ArrayList<>();
         ArrayList<Double> minusDiOutArrayList = new ArrayList<>();
         ArrayList<Double> plusDiOutArrayList = new ArrayList<>();
@@ -44,6 +46,12 @@ public class AdxDmModel {
             Log.d(TAG, "plusDi: " + plusDi);
             Log.d(TAG, "minusDi: " + minusDi);
 
+            double currentDiDiff = plusDi - minusDi;
+            if (currentDiDiff > maxDiDiff){
+                maxDiDiff = currentDiDiff;
+            }
+            double diDiffPercent = currentDiDiff/maxDiDiff;
+
             if(!isMinusDiGreater){
                 if(minusDi > plusDi){
                     Log.d(TAG, "MinusDiGreater Prereq State True");
@@ -58,12 +66,33 @@ public class AdxDmModel {
                     Log.d(TAG, "Now Buy");
                     adxListener.onBuy();
 
-                } else if (buyState == MainActivity.BuyState.IN_SELL_STATE && (minusDi > plusDi)){
-                    buyState = MainActivity.BuyState.IN_BUY_STATE;
-                    //TODO: SHOULD NOW SELL
-                    Log.d(TAG, "Now Sell");
-                    adxListener.onSell();
+//                } else if (buyState == MainActivity.BuyState.IN_SELL_STATE && (minusDi > plusDi)){
+//                    buyState = MainActivity.BuyState.IN_BUY_STATE;
+//                    //TODO: SHOULD NOW SELL
+//                    Log.d(TAG, "Now Sell");
+//                    adxListener.onSell();
 
+                } else if (buyState == MainActivity.BuyState.IN_SELL_STATE && (diDiffPercent <= 0.5 && diDiffPercent > 0.4)){
+                    //TODO: SELL 50%
+                    Log.d(TAG, "Now Selling 50%");
+                    sellRemainderState = MainActivity.SellRemainderState.SELL_50;
+                    adxListener.onSell();
+                } else if (buyState == MainActivity.BuyState.IN_SELL_STATE && (diDiffPercent <= 0.4 && diDiffPercent > 0.3)){
+                    //TODO: SELL REMAINING 70%
+                    Log.d(TAG, "Now Selling 70%");
+                    sellRemainderState = MainActivity.SellRemainderState.SELL_70;
+                    adxListener.onSell();
+                } else if (buyState == MainActivity.BuyState.IN_SELL_STATE && (diDiffPercent <= 0.3 && diDiffPercent > 0.2)){
+                    //TODO: SELL REMAINING 85%
+                    Log.d(TAG, "Now Selling 85%");
+                    sellRemainderState = MainActivity.SellRemainderState.SELL_85;
+                    adxListener.onSell();
+                } else if (buyState == MainActivity.BuyState.IN_SELL_STATE && (diDiffPercent <= 0.2 && diDiffPercent > 0.1)){
+                    buyState = MainActivity.BuyState.IN_BUY_STATE;
+                    //TODO: SELL REMAINING 100%
+                    Log.d(TAG, "Now Selling 100%");
+                    sellRemainderState = MainActivity.SellRemainderState.SELL_100;
+                    adxListener.onSell();
                 } else {
                     Log.d(TAG, "Not Buying or Selling");
                 }
