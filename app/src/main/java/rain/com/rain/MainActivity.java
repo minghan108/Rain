@@ -218,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "askPrice: " + price);
                 startCoin = startMoney/price;
                 startMoney = 0.0;
-                Log.d(TAG, "coin after buy order: " + startMoney);
+                Log.d(TAG, "coin after buy order: " + startCoin);
             }
 
             @Override
