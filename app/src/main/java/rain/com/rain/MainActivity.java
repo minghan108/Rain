@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
     public static enum SellRemainderState{
         NOT_IN_SELL_STATE,
         SELL_50,
-        SELL_70,
+        SELL_75,
         SELL_85,
         SELL_100
     }
@@ -48,7 +48,10 @@ public class MainActivity extends AppCompatActivity {
 
     public static enum BuyState{
         IN_BUY_STATE,
-        IN_SELL_STATE
+        IN_SELL_STATE,
+        IN_POST_SELL_50_STATE,
+        IN_POST_SELL_75_STATE,
+        IN_POST_SELL_85_STATE
     }
     public static boolean isMinusDiGreater = false;
     public static boolean isFirstLaunch = true;
@@ -59,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
     public static BuyState buyState = BuyState.IN_BUY_STATE;
     public static Double startMoney = 100.0;
     public static Double startCoin = 0.0;
-    public double maxDiDiff = 0.0;
+    public static double maxDiDiff = 0.0;
 
 
     @Override
@@ -183,9 +186,9 @@ public class MainActivity extends AppCompatActivity {
                         startMoney = startCoin * 0.5 * price;
                         startCoin = startCoin * 0.5;
                         break;
-                    case SELL_70:
-                        startMoney = startMoney + (startCoin * 0.7 * price);
-                        startCoin = startCoin * 0.3;
+                    case SELL_75:
+                        startMoney = startMoney + (startCoin * 0.75 * price);
+                        startCoin = startCoin * 0.25;
                         break;
                     case SELL_85:
                         startMoney = startMoney + (startCoin * 0.85 * price);
@@ -218,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "askPrice: " + price);
                 startCoin = startMoney/price;
                 startMoney = 0.0;
-                Log.d(TAG, "coin after buy order: " + startMoney);
+                Log.d(TAG, "coin after buy order: " + startCoin);
             }
 
             @Override

@@ -13,6 +13,7 @@ import static rain.com.rain.MainActivity.currentDiState;
 import static rain.com.rain.MainActivity.initialDiState;
 import static rain.com.rain.MainActivity.isFirstLaunch;
 import static rain.com.rain.MainActivity.isMinusDiGreater;
+import static rain.com.rain.MainActivity.maxDiDiff;
 import static rain.com.rain.MainActivity.sellRemainderState;
 
 public class AdxDmModel {
@@ -23,7 +24,6 @@ public class AdxDmModel {
         double[] adxOutArray = new double[closePrice.length];
         double[] minusDiOutArray = new double[closePrice.length];
         double[] plusDiOutArray = new double[closePrice.length];
-        double maxDiDiff = 0.0;
         ArrayList<Double> adxOutArrayList = new ArrayList<>();
         ArrayList<Double> minusDiOutArrayList = new ArrayList<>();
         ArrayList<Double> plusDiOutArrayList = new ArrayList<>();
@@ -46,11 +46,20 @@ public class AdxDmModel {
             Log.d(TAG, "plusDi: " + plusDi);
             Log.d(TAG, "minusDi: " + minusDi);
 
-            double currentDiDiff = plusDi - minusDi;
-            if (currentDiDiff > maxDiDiff){
-                maxDiDiff = currentDiDiff;
+            double currentDiDiff = 0.0;
+            double diDiffPercent =0.0;
+            if (buyState != MainActivity.BuyState.IN_BUY_STATE) {
+                currentDiDiff = plusDi - minusDi;
+                Log.d(TAG, "currentDiDiff: " + currentDiDiff);
+
+                if (currentDiDiff > maxDiDiff) {
+                    maxDiDiff = currentDiDiff;
+                }
+
+                Log.d(TAG, "maxDiDiff: " + maxDiDiff);
+                diDiffPercent = currentDiDiff / maxDiDiff;
+                Log.d(TAG, "diDiffPercent: " + diDiffPercent);
             }
-            double diDiffPercent = currentDiDiff/maxDiDiff;
 
             if(!isMinusDiGreater){
                 if(minusDi > plusDi){
@@ -75,20 +84,24 @@ public class AdxDmModel {
                 } else if (buyState == MainActivity.BuyState.IN_SELL_STATE && (diDiffPercent <= 0.5 && diDiffPercent > 0.4)){
                     //TODO: SELL 50%
                     Log.d(TAG, "Now Selling 50%");
+                    buyState = MainActivity.BuyState.IN_POST_SELL_50_STATE;
                     sellRemainderState = MainActivity.SellRemainderState.SELL_50;
                     adxListener.onSell();
-                } else if (buyState == MainActivity.BuyState.IN_SELL_STATE && (diDiffPercent <= 0.4 && diDiffPercent > 0.3)){
-                    //TODO: SELL REMAINING 70%
-                    Log.d(TAG, "Now Selling 70%");
-                    sellRemainderState = MainActivity.SellRemainderState.SELL_70;
+                } else if (buyState == MainActivity.BuyState.IN_POST_SELL_50_STATE && (diDiffPercent <= 0.4 && diDiffPercent > 0.3)){
+                    //TODO: SELL REMAINING 75%
+                    Log.d(TAG, "Now Selling 75%");
+                    buyState = MainActivity.BuyState.IN_POST_SELL_75_STATE;
+                    sellRemainderState = MainActivity.SellRemainderState.SELL_75;
                     adxListener.onSell();
-                } else if (buyState == MainActivity.BuyState.IN_SELL_STATE && (diDiffPercent <= 0.3 && diDiffPercent > 0.2)){
+                } else if (buyState == MainActivity.BuyState.IN_POST_SELL_75_STATE && (diDiffPercent <= 0.3 && diDiffPercent > 0.2)){
                     //TODO: SELL REMAINING 85%
                     Log.d(TAG, "Now Selling 85%");
+                    buyState = MainActivity.BuyState.IN_POST_SELL_85_STATE;
                     sellRemainderState = MainActivity.SellRemainderState.SELL_85;
                     adxListener.onSell();
-                } else if (buyState == MainActivity.BuyState.IN_SELL_STATE && (diDiffPercent <= 0.2 && diDiffPercent > 0.1)){
+                } else if (buyState == MainActivity.BuyState.IN_POST_SELL_85_STATE && (diDiffPercent <= 0.2)){
                     buyState = MainActivity.BuyState.IN_BUY_STATE;
+                    maxDiDiff = 0.0;
                     //TODO: SELL REMAINING 100%
                     Log.d(TAG, "Now Selling 100%");
                     sellRemainderState = MainActivity.SellRemainderState.SELL_100;
