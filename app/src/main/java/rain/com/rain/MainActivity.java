@@ -171,6 +171,21 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 sendDefKlinesRequest("ETHUSDT");
+//                if (buyState != MainActivity.BuyState.IN_BUY_STATE){
+                    BuyListener buyListener = new BuyListener() {
+                        @Override
+                        public void onSuccess(Double price) {
+
+                        }
+
+                        @Override
+                        public void onFailure(String response) {
+
+                        }
+                    };
+
+                    buySellManager.sendSellRequest(buyListener);
+//                }
             }
 
         }, 0, 3000);
@@ -183,8 +198,8 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "askPrice: " + price);
                 switch(sellRemainderState){
                     case SELL_50:
-                        startMoney = startCoin * 0.5 * price;
-                        startCoin = startCoin * 0.5;
+                        startMoney = startCoin * 0.6 * price;
+                        startCoin = startCoin * 0.4;
                         break;
                     case SELL_75:
                         startMoney = startMoney + (startCoin * 0.75 * price);
