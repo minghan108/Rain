@@ -165,6 +165,7 @@ public class Parser {
         klinesCloseLinkedList.clear();
         klinesHighLinkedList.clear();
         klinesLowLinkedList.clear();
+        klinesVolumeLinkedList.clear();
 
         try {
             JSONArray jsonArray = new JSONArray(response);
@@ -175,8 +176,9 @@ public class Parser {
                 klinesHighLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(2).toString()));
                 klinesLowLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(3).toString()));
                 klinesCloseLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString()));
-            }
+                klinesVolumeLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(5).toString()));
 
+            }
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -188,6 +190,7 @@ public class Parser {
 
     @RequiresApi(api = Build.VERSION_CODES.N)
     private void calculateSma(String symbol, AdxListener adxListener) {
+        Log.d(TAG, "calculateSma");
         Double[] highPriceArray = klinesHighLinkedList.toArray(new Double[klinesHighLinkedList.size()]);
         Double[] lowPriceArray = klinesLowLinkedList.toArray(new Double[klinesLowLinkedList.size()]);
         Double[] closePriceArray = klinesCloseLinkedList.toArray(new Double[klinesCloseLinkedList.size()]);
@@ -203,8 +206,8 @@ public class Parser {
 //        simpleSMA.calculateSimpleMovingAverage(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, klinesListener, symbol);
 
 
-
-        adxDmModel.calculateAdxDi(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
+        adxDmModel.calculateSma(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
+        //adxDmModel.calculateAdxDi(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
     }
 
     public static long localToGMT() {

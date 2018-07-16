@@ -162,15 +162,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void sendKlinesRequestTimer() {
-        timer = new Timer();
-        timer.scheduleAtFixedRate(new TimerTask() {
+//        timer = new Timer();
+//        timer.scheduleAtFixedRate(new TimerTask() {
+//
+//            @Override
+//            public void run() {
+//                sendDefKlinesRequest("BTCUSDT");
+//            }
+//
+//        }, 0, 3000);
 
-            @Override
-            public void run() {
-                sendDefKlinesRequest("ETHUSDT");
-            }
+        sendDefKlinesRequest("BTCUSDT");
 
-        }, 0, 3000);
     }
 
     private void handleSellOrder() {

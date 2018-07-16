@@ -7,6 +7,8 @@ import com.tictactec.ta.lib.MInteger;
 import com.tictactec.ta.lib.RetCode;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import static rain.com.rain.MainActivity.buyState;
 import static rain.com.rain.MainActivity.currentDiState;
@@ -17,7 +19,86 @@ import static rain.com.rain.MainActivity.sellRemainderState;
 
 public class AdxDmModel {
     private String TAG = "AdxDmModel ";
+    private boolean isFirstLaunch = true;
 
+
+    public void calculateSma(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, AdxListener adxListener, String symbol){
+        double[] smaOutArray = new double[volume.length];
+        ArrayList<Double> smaOutArrayList = new ArrayList<>();
+        boolean up = false;
+        boolean down = false;
+        double resistanceDouble = 0.0;
+        double supportDouble = 0.0;
+
+        Core c = new Core();
+        MInteger begin = new MInteger();
+        MInteger length = new MInteger();
+        RetCode smaRetCode = c.sma(0, volume.length - 1, volume, 6, begin, length, smaOutArray);
+
+        smaOutArrayList = removeZeroInArray(smaOutArray);
+
+        Log.d(TAG, "calculateSma");
+
+        if (smaRetCode == RetCode.Success) {
+            try {
+
+                if (isFirstLaunch) {
+                    isFirstLaunch = false;
+
+                    final int SUB_ARRAY_WINDOW = 5;
+                    for (int i = 99; i > 5; i--) {
+
+                        double[] subHighPrice = Arrays.copyOfRange(highPrice, highPrice.length - i, highPrice.length - i + SUB_ARRAY_WINDOW);
+                        double[] subLowPrice = Arrays.copyOfRange(lowPrice, lowPrice.length - i, lowPrice.length - i + SUB_ARRAY_WINDOW);
+                        //double[] subSmaVolume = Arrays.copyOfRange(smaOutArrayList, smaOutArrayList.size() - i, smaOutArrayList.size() - i + SUB_ARRAY_WINDOW);
+                        List<Double> subSmaVolume = smaOutArrayList.subList(smaOutArrayList.size() - i, smaOutArrayList.size() - i + SUB_ARRAY_WINDOW);
+                        //Log.d(TAG, "subSmaVolume.Size(): " + subSmaVolume.size());
+                        double[] subVolume = Arrays.copyOfRange(volume, volume.length - i, volume.length - i + SUB_ARRAY_WINDOW);
+                        double subClosePrice = closePrice[closePrice.length - i + SUB_ARRAY_WINDOW];
+                        double sHighPrice = closePrice[closePrice.length - i + SUB_ARRAY_WINDOW];
+
+                        up = (subHighPrice[subHighPrice.length - 3] > subHighPrice[subHighPrice.length - 4]) && (subHighPrice[subHighPrice.length - 4] > subHighPrice[subHighPrice.length - 5]) &&
+                                (subHighPrice[subHighPrice.length - 2] < subHighPrice[subHighPrice.length - 3]) && (subHighPrice[subHighPrice.length - 1] < subHighPrice[subHighPrice.length - 2]) &&
+                                (subVolume[subVolume.length - 3] > subSmaVolume.get(subSmaVolume.size() - 3));
+
+                        down = (subLowPrice[subLowPrice.length - 3] < subLowPrice[subLowPrice.length - 4]) && (subLowPrice[subLowPrice.length - 4] < subLowPrice[subLowPrice.length - 5]) &&
+                                (subLowPrice[subLowPrice.length - 2] > subLowPrice[subLowPrice.length - 3]) && (subLowPrice[subLowPrice.length - 1] > subLowPrice[subLowPrice.length - 2]) &&
+                                (subVolume[subVolume.length - 3] > subSmaVolume.get(subSmaVolume.size() - 3));
+
+                        resistanceDouble = up ? subHighPrice[subHighPrice.length - 3] : resistanceDouble;
+                        supportDouble = down ? subLowPrice[subLowPrice.length - 3] : supportDouble;
+
+                        if (sHighPrice > resistanceDouble && resistanceDouble != 0.0){
+                            //TODO: SEND NOTIFICATION THAT BREAKOUT OCCURRED
+                            Log.d(TAG, "BREAK ABOVE RESISTANCE");
+                        }
+                        Log.d(TAG, "sHighPrice: " + sHighPrice);
+                        //Log.d(TAG, "subClosePrice: " + subClosePrice);
+                        Log.d(TAG, "resistanceDouble: " + resistanceDouble);
+                        Log.d(TAG, "supportDouble: " + supportDouble);
+                    }
+
+                } else {
+                    up = (highPrice[highPrice.length - 3] > highPrice[highPrice.length - 4]) && (highPrice[highPrice.length - 4] > highPrice[highPrice.length - 5]) &&
+                            (highPrice[highPrice.length - 2] < highPrice[highPrice.length - 3]) && (highPrice[highPrice.length - 1] < highPrice[highPrice.length - 2]) &&
+                            (volume[volume.length - 3] > smaOutArrayList.get(smaOutArrayList.size() - 3));
+
+                    down = (lowPrice[lowPrice.length - 3] < lowPrice[lowPrice.length - 4]) && (lowPrice[lowPrice.length - 4] < lowPrice[lowPrice.length - 5]) &&
+                            (lowPrice[lowPrice.length - 2] > lowPrice[lowPrice.length - 3]) && (lowPrice[lowPrice.length - 1] > lowPrice[lowPrice.length - 2]) &&
+                            (volume[volume.length - 3] < smaOutArrayList.get(smaOutArrayList.size() - 3));
+
+                    resistanceDouble = up ? highPrice[highPrice.length - 3] : resistanceDouble;
+                    supportDouble = down ? lowPrice[lowPrice.length - 3] : supportDouble;
+
+                    Log.d(TAG, "resistanceDouble: " + resistanceDouble);
+                    Log.d(TAG, "supportDouble: " + supportDouble);
+                }
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+
+        }
+    }
 
     public void calculateAdxDi(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, AdxListener adxListener, String symbol) {
         double[] adxOutArray = new double[closePrice.length];

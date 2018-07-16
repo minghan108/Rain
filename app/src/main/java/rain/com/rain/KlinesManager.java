@@ -128,6 +128,7 @@ public class KlinesManager {
                 OnOkhttpProcessFinish httpListener = new OnOkhttpProcessFinish() {
                     @Override
                     public void onHttpEvent(String response) {
+                        Log.d(TAG, "sendGetAllPlayableContentRequest onSuccess");
                         handleGetDefaultKlinesResponseFromServer(response, adxListener, symbol);
                         sem.sem_post();
                     }
@@ -153,7 +154,7 @@ public class KlinesManager {
     }
 
     private String getGetDefaultKlinesUrl(String symbol) {
-        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=500";
+        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=105";
     }
 
     public void sendGetSymbolsRequest(final SymbolsListener symbolsListener) {
