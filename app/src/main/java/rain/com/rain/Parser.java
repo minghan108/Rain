@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static rain.com.rain.MainActivity.symbolBreakoutMap;
+
 /**
  * Created by MSI\mliu on 06/04/18.
  */
@@ -195,6 +197,11 @@ public class Parser {
         Double[] lowPriceArray = klinesLowLinkedList.toArray(new Double[klinesLowLinkedList.size()]);
         Double[] closePriceArray = klinesCloseLinkedList.toArray(new Double[klinesCloseLinkedList.size()]);
         Double[] volumePriceArray = klinesVolumeLinkedList.toArray(new Double[klinesVolumeLinkedList.size()]);
+        Log.d(TAG, "klinesHighLinkedList.Size: " + klinesHighLinkedList.size());
+        Log.d(TAG, "klinesLowLinkedList.Size: " + klinesLowLinkedList.size());
+        Log.d(TAG, "klinesCloseLinkedList.Size: " + klinesCloseLinkedList.size());
+        Log.d(TAG, "klinesVolumeLinkedList.Size: " + klinesVolumeLinkedList.size());
+
         double[] highPricePrimArray = ArrayUtils.toPrimitive(highPriceArray);
         double[] lowPricePrimArray = ArrayUtils.toPrimitive(lowPriceArray);
         double[] closePricePrimArray = ArrayUtils.toPrimitive(closePriceArray);
@@ -227,7 +234,10 @@ public class Parser {
 
             try {
                 String symbol = jsonArray.getJSONObject(i).getString("symbol");
-                symbolList.add(symbol);
+                if (symbol.contains("BTC")){
+                    symbolList.add(symbol);
+                    symbolBreakoutMap.put(symbol, false);
+                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }

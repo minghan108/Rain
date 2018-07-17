@@ -7,6 +7,7 @@ import android.util.Log;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 import static rain.com.rain.MainActivity.localToGMTOffset;

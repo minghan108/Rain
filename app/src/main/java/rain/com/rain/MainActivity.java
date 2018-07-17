@@ -10,6 +10,7 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -23,8 +24,10 @@ public class MainActivity extends AppCompatActivity {
     BuySellManager buySellManager = new BuySellManager();
     TextView rateTextView;
     TextView reverseRateTextView;
+    TextView breakoutTextView;
     String TAG = "MainActivity";
     Timer timer;
+    private String breakoutTextViewString = "";
     private List<String> symbolsList = new ArrayList<>();
     private String[] symbolsArray = {"BTCUSDT", "LTCUSDT", "BNBUSDT", "ETHUSDT", "BCCUSDT", "ADAUSDT", "QTUMUSDT", "NEOUSDT"};
     private int symbolsIndex = 0;
@@ -50,6 +53,8 @@ public class MainActivity extends AppCompatActivity {
         IN_BUY_STATE,
         IN_SELL_STATE
     }
+    public static HashMap<String, Boolean> symbolBreakoutMap = new HashMap<>();
+    public static boolean isFirstScanComplete = false;
     public static boolean isMinusDiGreater = false;
     public static boolean isFirstLaunch = true;
     public static boolean canBuy = false;
@@ -66,11 +71,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        rateTextView = (TextView)this.findViewById(R.id.RatesTextView);
-        reverseRateTextView = (TextView)this.findViewById(R.id.ReverseRatesTextView);
+//        rateTextView = (TextView)this.findViewById(R.id.RatesTextView);
+//        reverseRateTextView = (TextView)this.findViewById(R.id.ReverseRatesTextView);
+        breakoutTextView = (TextView)this.findViewById(R.id.BreakoutTextView);
         Log.d(TAG, "timestamp: " + localToGMT());
-        rateTextView.setMovementMethod(new ScrollingMovementMethod());
-        reverseRateTextView.setMovementMethod(new ScrollingMovementMethod());
+//        rateTextView.setMovementMethod(new ScrollingMovementMethod());
+//        reverseRateTextView.setMovementMethod(new ScrollingMovementMethod());
+        breakoutTextView.setMovementMethod(new ScrollingMovementMethod());
     }
 
     public static long localToGMT() {
@@ -85,14 +92,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume(){
         super.onResume();
-        //sendGetSymbolsRequest();
+        sendGetSymbolsRequest();
 //        sendDefKlinesRequest(symbolsArray[symbolsIndex]);
         //sendDefKlinesRequest("ETHUSDT");
         //sendCurrentPriceRequest();
         //resendKlinesRequest();
         //sendKlinesRequest(localToGMTOffset());
         //sendDefKlinesRequest(symbol);
-        sendKlinesRequestTimer();
+//        sendKlinesRequestTimer();
     }
 
 //    private void sendDefKlinesRequest(String symbol) {
@@ -139,8 +146,24 @@ public class MainActivity extends AppCompatActivity {
     private void sendDefKlinesRequest(String symbol) {
         AdxListener adxListener = new AdxListener() {
             @Override
-            public void onSuccess() {
+            public void onSuccess(String displayString) {
+                breakoutTextViewString += displayString;
 
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        breakoutTextView.setText(breakoutTextViewString);
+                    }
+                });
+
+                symbolsIndex += 1;
+
+                if (symbolsIndex >= symbolsList.size()) {
+                    isFirstScanComplete = true;
+                    symbolsIndex = 0;
+                }
+
+                sendDefKlinesRequest(symbolsList.get(symbolsIndex));
             }
 
             @Override

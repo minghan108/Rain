@@ -14,8 +14,10 @@ import static rain.com.rain.MainActivity.buyState;
 import static rain.com.rain.MainActivity.currentDiState;
 import static rain.com.rain.MainActivity.initialDiState;
 import static rain.com.rain.MainActivity.isFirstLaunch;
+import static rain.com.rain.MainActivity.isFirstScanComplete;
 import static rain.com.rain.MainActivity.isMinusDiGreater;
 import static rain.com.rain.MainActivity.sellRemainderState;
+import static rain.com.rain.MainActivity.symbolBreakoutMap;
 
 public class AdxDmModel {
     private String TAG = "AdxDmModel ";
@@ -29,33 +31,36 @@ public class AdxDmModel {
         boolean down = false;
         double resistanceDouble = 0.0;
         double supportDouble = 0.0;
+        boolean isBreakoutOld = symbolBreakoutMap.get(symbol);
+        boolean isBreakoutNew = false;
+        String displayString = "";
 
         Core c = new Core();
         MInteger begin = new MInteger();
         MInteger length = new MInteger();
         RetCode smaRetCode = c.sma(0, volume.length - 1, volume, 6, begin, length, smaOutArray);
-
         smaOutArrayList = removeZeroInArray(smaOutArray);
-
         Log.d(TAG, "calculateSma");
 
         if (smaRetCode == RetCode.Success) {
             try {
-
                 if (isFirstLaunch) {
-                    isFirstLaunch = false;
-
+//                    isFirstLaunch = false;
                     final int SUB_ARRAY_WINDOW = 5;
-                    for (int i = 99; i > 5; i--) {
 
+                    for (int i = 99; i > 5; i--) {
                         double[] subHighPrice = Arrays.copyOfRange(highPrice, highPrice.length - i, highPrice.length - i + SUB_ARRAY_WINDOW);
                         double[] subLowPrice = Arrays.copyOfRange(lowPrice, lowPrice.length - i, lowPrice.length - i + SUB_ARRAY_WINDOW);
                         //double[] subSmaVolume = Arrays.copyOfRange(smaOutArrayList, smaOutArrayList.size() - i, smaOutArrayList.size() - i + SUB_ARRAY_WINDOW);
                         List<Double> subSmaVolume = smaOutArrayList.subList(smaOutArrayList.size() - i, smaOutArrayList.size() - i + SUB_ARRAY_WINDOW);
                         //Log.d(TAG, "subSmaVolume.Size(): " + subSmaVolume.size());
                         double[] subVolume = Arrays.copyOfRange(volume, volume.length - i, volume.length - i + SUB_ARRAY_WINDOW);
+
+                        //Use to compare currentPrice to resistanceDouble
                         double subClosePrice = closePrice[closePrice.length - i + SUB_ARRAY_WINDOW];
-                        double sHighPrice = closePrice[closePrice.length - i + SUB_ARRAY_WINDOW];
+
+                        //Use when Testing When Breakout Occurs
+                        double sHighPrice = highPrice[highPrice.length - i + SUB_ARRAY_WINDOW];
 
                         up = (subHighPrice[subHighPrice.length - 3] > subHighPrice[subHighPrice.length - 4]) && (subHighPrice[subHighPrice.length - 4] > subHighPrice[subHighPrice.length - 5]) &&
                                 (subHighPrice[subHighPrice.length - 2] < subHighPrice[subHighPrice.length - 3]) && (subHighPrice[subHighPrice.length - 1] < subHighPrice[subHighPrice.length - 2]) &&
@@ -68,15 +73,26 @@ public class AdxDmModel {
                         resistanceDouble = up ? subHighPrice[subHighPrice.length - 3] : resistanceDouble;
                         supportDouble = down ? subLowPrice[subLowPrice.length - 3] : supportDouble;
 
-                        if (sHighPrice > resistanceDouble && resistanceDouble != 0.0){
-                            //TODO: SEND NOTIFICATION THAT BREAKOUT OCCURRED
-                            Log.d(TAG, "BREAK ABOVE RESISTANCE");
-                        }
-                        Log.d(TAG, "sHighPrice: " + sHighPrice);
-                        //Log.d(TAG, "subClosePrice: " + subClosePrice);
-                        Log.d(TAG, "resistanceDouble: " + resistanceDouble);
-                        Log.d(TAG, "supportDouble: " + supportDouble);
+                        //if (sHighPrice > resistanceDouble && resistanceDouble != 0.0){
+//                        if (subClosePrice > resistanceDouble && resistanceDouble != 0.0){
+//                            //TODO: SEND NOTIFICATION THAT BREAKOUT OCCURRED
+//                            Log.d(TAG, "BREAK ABOVE RESISTANCE");
+//                            Log.d(TAG, "symbol: " + symbol);
+//                        }
+//                        //Log.d(TAG, "sHighPrice: " + sHighPrice);
+//                        Log.d(TAG, "subClosePrice: " + subClosePrice);
+//                        Log.d(TAG, "resistanceDouble: " + resistanceDouble);
+//                        Log.d(TAG, "supportDouble: " + supportDouble);
                     }
+
+                    if (closePrice[closePrice.length - 1] > resistanceDouble && resistanceDouble != 0.0){
+                        isBreakoutNew = true;
+//                        Log.d(TAG, "BREAK ABOVE RESISTANCE");
+//                        Log.d(TAG, "price: " + closePrice[closePrice.length - 1]);
+//                        Log.d(TAG, "resistanceDouble: " + resistanceDouble);
+                        //Log.d(TAG, "supportDouble: " + supportDouble);
+                    }
+                    Log.d(TAG, "symbol: " + symbol);
 
                 } else {
                     up = (highPrice[highPrice.length - 3] > highPrice[highPrice.length - 4]) && (highPrice[highPrice.length - 4] > highPrice[highPrice.length - 5]) &&
@@ -93,10 +109,27 @@ public class AdxDmModel {
                     Log.d(TAG, "resistanceDouble: " + resistanceDouble);
                     Log.d(TAG, "supportDouble: " + supportDouble);
                 }
+
+                if (isFirstScanComplete){
+                    if (isBreakoutOld == false && isBreakoutNew == true){
+                        symbolBreakoutMap.put(symbol, isBreakoutNew);
+                        //TODO: NOTIFY NEW BREAKOUT OCCURRED
+                        Log.d(TAG, "BREAK ABOVE RESISTANCE");
+                        Log.d(TAG, "price: " + closePrice[closePrice.length - 1]);
+                        Log.d(TAG, "resistanceDouble: " + resistanceDouble);
+                        displayString = symbol + "\n" +
+                                "price: " + closePrice[closePrice.length - 1] + "\n" +
+                                "resistanceLevel: " + resistanceDouble + "\n" +
+                                "\n";
+                    }
+                } else {
+                    symbolBreakoutMap.put(symbol, isBreakoutNew);
+                }
             } catch (Exception e){
                 e.printStackTrace();
             }
 
+            adxListener.onSuccess(displayString);
         }
     }
 

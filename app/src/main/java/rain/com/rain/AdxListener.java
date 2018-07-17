@@ -1,7 +1,7 @@
 package rain.com.rain;
 
 public interface AdxListener {
-    void onSuccess();
+    void onSuccess(String displayString);
 
     void onFailure(String response);
 
