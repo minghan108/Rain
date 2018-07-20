@@ -92,9 +92,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume(){
         super.onResume();
-        sendGetSymbolsRequest();
+//        sendGetSymbolsRequest();
+
 //        sendDefKlinesRequest(symbolsArray[symbolsIndex]);
-        //sendDefKlinesRequest("ETHUSDT");
+        sendDefKlinesRequest("BTCUSDT");
         //sendCurrentPriceRequest();
         //resendKlinesRequest();
         //sendKlinesRequest(localToGMTOffset());
@@ -158,12 +159,18 @@ public class MainActivity extends AppCompatActivity {
 
                 symbolsIndex += 1;
 
-                if (symbolsIndex >= symbolsList.size()) {
-                    isFirstScanComplete = true;
-                    symbolsIndex = 0;
+//                if (symbolsIndex >= symbolsList.size()) {
+//                    isFirstScanComplete = true;
+//                    symbolsIndex = 0;
+//                }
+//
+//                sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+
+
+                if (symbolsIndex < symbolsList.size()){
+                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
                 }
 
-                sendDefKlinesRequest(symbolsList.get(symbolsIndex));
             }
 
             @Override
@@ -283,6 +290,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(List<String> symbols) {
                 symbolsList = symbols;
+                Log.d(TAG, "symbolList.Size(): " + symbolsList.size());
+
 
                 sendDefKlinesRequest(symbolsList.get(symbolsIndex));
 

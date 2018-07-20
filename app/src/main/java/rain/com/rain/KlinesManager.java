@@ -155,7 +155,8 @@ public class KlinesManager {
     }
 
     private String getGetDefaultKlinesUrl(String symbol) {
-        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=105";
+//        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=105";
+        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=500";
     }
 
     public void sendGetSymbolsRequest(final SymbolsListener symbolsListener) {
