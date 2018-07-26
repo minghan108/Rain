@@ -9,12 +9,10 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.w3c.dom.Node;
 
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -43,6 +41,7 @@ public class Parser {
     private double hunDayPriceAvg = 0;
     private SimpleMovingAverageExample simpleSMA = new SimpleMovingAverageExample();
     private AdxDmModel adxDmModel = new AdxDmModel();
+    private HashMap<String, Balance> balanceHashMap = new HashMap<>();
 
 
     public rain.com.rain.SortedMap parseCurrentPriceJsonResponse(String response) throws IOException {
@@ -163,7 +162,7 @@ public class Parser {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    public void parseDefaultKlinesJsonResponse(String response, AdxListener adxListener, String symbol){
+    public void parseDefaultKlinesJsonResponse(String response, BollingerListener adxListener, String symbol){
         klinesCloseLinkedList.clear();
         klinesHighLinkedList.clear();
         klinesLowLinkedList.clear();
@@ -191,7 +190,7 @@ public class Parser {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    private void calculateSma(String symbol, AdxListener adxListener) {
+    private void calculateSma(String symbol, BollingerListener adxListener) {
         Log.d(TAG, "calculateSma");
         Double[] highPriceArray = klinesHighLinkedList.toArray(new Double[klinesHighLinkedList.size()]);
         Double[] lowPriceArray = klinesLowLinkedList.toArray(new Double[klinesLowLinkedList.size()]);
@@ -217,6 +216,9 @@ public class Parser {
         adxDmModel.calculateBol(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
         //adxDmModel.calculateBolOptimization(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
         //adxDmModel.calculateAdxDi(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
+
+        //adxDmModel.calculateBolCLoseOptimization(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
+
     }
 
     public static long localToGMT() {
@@ -288,6 +290,77 @@ public class Parser {
             buyListener.onFailure("Failure when parsing SendBuyResponse");
             e.printStackTrace();
         }
+    }
+
+    public Long parseServerTimeResponse(String response, ServerTimeListener serverTimeListener) {
+        Log.d(TAG, "SeverTimeResponse: " + response);
+        Long serverTime = 0L;
+
+        try {
+            JSONObject obj = new JSONObject(response);
+            serverTime = obj.getLong("serverTime");
+            Log.d(TAG, "serverTime: " + serverTime);
+            //serverTimeListener.onSuccess(serverTime);
+
+
+        } catch (JSONException e) {
+            serverTimeListener.onFailure("Failure when parsing SendBuyResponse");
+            e.printStackTrace();
+        }
+
+        return serverTime;
+
+    }
+
+    public HashMap<String, Balance> parseAccountInfoJsonResponse(String response, AccountInfoListener accountInfoListener) {
+        try {
+            balanceHashMap.clear();
+            JSONObject obj = new JSONObject(response);
+            JSONArray jsonArray = obj.getJSONArray("balances");
+
+            for(int i=0;i<jsonArray.length();i++)
+            {
+                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                String asset = jsonObject1.optString("asset");
+                double freeCoin = jsonObject1.optDouble("free");
+                Balance balance = new Balance();
+                balance.setAsset(asset);
+                balance.setFreeCoin(freeCoin);
+                balanceHashMap.put(asset, balance);
+            }
+
+            return balanceHashMap;
+        } catch (JSONException e) {
+            accountInfoListener.onFailure("Failure when parsing parseAccountInfoJsonResponse");
+            e.printStackTrace();
+            return null;
+        }
+
+    }
+
+    public List<Long> parseCheckOpenOrderResponse(String response, OpenOrderListener openOrderListener) {
+        List<Long> cancelBuyOrderIdList = new ArrayList<>();
+        JSONArray jsonArray = null;
+        try {
+            jsonArray = new JSONArray(response);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+
+            try {
+                String side = jsonArray.getJSONObject(i).optString("side");
+                if (side.equalsIgnoreCase("BUY")){
+                    cancelBuyOrderIdList.add(jsonArray.getJSONObject(i).optLong("orderId"));
+                }
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return cancelBuyOrderIdList;
     }
 }
 

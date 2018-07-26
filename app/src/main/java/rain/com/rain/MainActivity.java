@@ -8,6 +8,8 @@ import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.widget.TextView;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -16,12 +18,10 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
 
-import static rain.com.rain.SimpleMovingAverageExample.outputTextUptrend;
-import static rain.com.rain.SimpleMovingAverageExample.outputTextDowntrend;
-
 public class MainActivity extends AppCompatActivity {
     KlinesManager klinesManager = new KlinesManager();
     BuySellManager buySellManager = new BuySellManager();
+    OrderManager orderManager = new OrderManager();
     TextView rateTextView;
     TextView reverseRateTextView;
     TextView breakoutTextView;
@@ -31,6 +31,19 @@ public class MainActivity extends AppCompatActivity {
     private List<String> symbolsList = new ArrayList<>();
     private String[] symbolsArray = {"BTCUSDT", "LTCUSDT", "BNBUSDT", "ETHUSDT", "BCCUSDT", "ADAUSDT", "QTUMUSDT", "NEOUSDT"};
     private int symbolsIndex = 0;
+    private double buyPrice = 0.0;
+    private String secretKey = "";
+    private double buyQuantity = 0.0;
+    private double usdtCoin = 0.0;
+    private int cancelBuyOrderIdListLength = 0;
+    private int cancelBuyOrderOnSuccessCount = 0;
+    private double buyOrderTier1 = 0.0;
+    private double buyOrderTier2 = 0.0;
+    private double buyOrderTier3 = 0.0;
+    private double buyOrderTier4 = 0.0;
+    private List<Double> buyOrderTierList = new ArrayList<>();
+    private List<Double> buyOrderQuantityPercentList = new ArrayList<>();
+
 
     private static enum InitialDiState{
 
@@ -54,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
         IN_SELL_STATE
     }
     public static HashMap<String, Boolean> symbolBreakoutMap = new HashMap<>();
+    public static HashMap<String, Balance> balanceHashMap = new HashMap<>();
     public static boolean isFirstScanComplete = false;
     public static boolean isMinusDiGreater = false;
     public static boolean isFirstLaunch = true;
@@ -65,6 +79,9 @@ public class MainActivity extends AppCompatActivity {
     public static Double startMoney = 100.0;
     public static Double startCoin = 0.0;
     public double maxDiDiff = 0.0;
+    public static int limit  = 45;
+    public static Long serverTime = 0L;
+    public static String symbol = "ADAUSDT";
 
 
     @Override
@@ -95,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
 //        sendGetSymbolsRequest();
 
 //        sendDefKlinesRequest(symbolsArray[symbolsIndex]);
-        sendDefKlinesRequest("BTCUSDT");
+        sendDefKlinesRequest(symbol);
         //sendCurrentPriceRequest();
         //resendKlinesRequest();
         //sendKlinesRequest(localToGMTOffset());
@@ -145,50 +162,295 @@ public class MainActivity extends AppCompatActivity {
 //    }
 
     private void sendDefKlinesRequest(String symbol) {
-        AdxListener adxListener = new AdxListener() {
-            @Override
-            public void onSuccess(String displayString) {
-                breakoutTextViewString += displayString;
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        breakoutTextView.setText(breakoutTextViewString);
-                    }
-                });
-
-                symbolsIndex += 1;
-
-//                if (symbolsIndex >= symbolsList.size()) {
-//                    isFirstScanComplete = true;
-//                    symbolsIndex = 0;
+//        AdxListener adxListener = new AdxListener() {
+//            @Override
+//            public void onSuccess(String displayString) {
+//                breakoutTextViewString += displayString;
+//
+//                runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        breakoutTextView.setText(breakoutTextViewString);
+//                    }
+//                });
+//
+//                symbolsIndex += 1;
+//
+////                if (symbolsIndex >= symbolsList.size()) {
+////                    isFirstScanComplete = true;
+////                    symbolsIndex = 0;
+////                }
+////
+////                sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+//
+//
+//                if (symbolsIndex < symbolsList.size()){
+//                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
 //                }
 //
-//                sendDefKlinesRequest(symbolsList.get(symbolsIndex));
+//            }
+//
+//            @Override
+//            public void onFailure(String response) {
+//
+//            }
+//
+//            @Override
+//            public void onBuy() {
+//                handleBuyOrder();
+//            }
+//
+//            @Override
+//            public void onSell() {
+//                handleSellOrder();
+//            }
+//        };
 
-
-                if (symbolsIndex < symbolsList.size()){
-                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
-                }
+        final BuyOrderListener buyOrderListener = new BuyOrderListener() {
+            @Override
+            public void onSuccess() {
 
             }
 
             @Override
-            public void onFailure(String response) {
+            public void onFailure(String failureMsg) {
 
-            }
-
-            @Override
-            public void onBuy() {
-                handleBuyOrder();
-            }
-
-            @Override
-            public void onSell() {
-                handleSellOrder();
             }
         };
-        klinesManager.sendDefaultKlinesRequest(adxListener, symbol);
+
+        final AccountInfoListener accountInfoListener = new AccountInfoListener() {
+            @Override
+            public void onSuccess(HashMap<String, Balance> balanceHashMap) {
+                MainActivity.balanceHashMap = balanceHashMap;
+                Balance usdtBalance = balanceHashMap.get("USDT");
+                usdtCoin = usdtBalance.getFreeCoin();
+                Log.d(TAG, "usdtCoin: " + usdtCoin);
+
+                int placeOrderIndex = 0;
+                buyOrderQuantityPercentList.clear();
+
+                if ((usdtCoin * 0.1) >= 10.2){
+                    Log.d(TAG, "(usdtCoin * 0.1) >= 10.2");
+                    placeOrderIndex = 4;
+                    buyOrderQuantityPercentList.add(0.3);
+                    buyOrderQuantityPercentList.add(0.4);
+                    buyOrderQuantityPercentList.add(0.2);
+                    buyOrderQuantityPercentList.add(0.1);
+                } else if ((usdtCoin * 0.22) >= 10.2){
+                    Log.d(TAG, "(usdtCoin * 0.22) >= 10.2");
+                    placeOrderIndex = 3;
+                    buyOrderQuantityPercentList.add(0.335);
+                    buyOrderQuantityPercentList.add(0.445);
+                    buyOrderQuantityPercentList.add(0.22);
+                } else if ((usdtCoin * 0.435) >= 10.2){
+                    Log.d(TAG, "(usdtCoin * 0.435) >= 10.2");
+                    placeOrderIndex = 2;
+                    buyOrderQuantityPercentList.add(0.435);
+                    buyOrderQuantityPercentList.add(0.565);
+                } else if ((usdtCoin >= 10.2)){
+                    Log.d(TAG, "usdtCoin >= 10.2");
+                    placeOrderIndex = 1;
+                    buyOrderQuantityPercentList.add(1.0);
+                } else {
+                    Log.d(TAG, "Not Enough usdt, Do Nothing");
+                    placeOrderIndex = 0;
+                    buyOrderQuantityPercentList.add(0.0);
+                }
+
+                for (int j = 0; j < placeOrderIndex; j++) {
+                    String signature = "";
+                    buyQuantity = 0.0;
+                    buyQuantity = roundDouble(((BigDecimal.valueOf(usdtCoin).multiply(BigDecimal.valueOf(buyOrderQuantityPercentList.get(j)))).divide(BigDecimal.valueOf(buyOrderTierList.get(j)), 2, RoundingMode.HALF_DOWN)).doubleValue(), 1);
+                    Log.d(TAG, "buyQuantity: " + buyQuantity);
+                    String buyQueryString = getBuyQueryString(buyOrderTierList.get(j), buyQuantity);
+                    String queryStrSignature = "";
+                    try {
+                        signature = orderManager.encode(secretKey, buyQueryString);
+                        queryStrSignature = buyQueryString + "&signature=" + signature;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    if (buyPrice != 0.0 || queryStrSignature != "") {
+                        orderManager.sendBuyOrderRequest(buyOrderListener, queryStrSignature);
+                    } else {
+                        Log.d(TAG, "buyOrder buyPrice != 0.0 || queryStrSignature != \"\"");
+                    }
+                }
+
+
+                //buyQuantity = usdtCoin/buyPrice;
+
+
+//                String signature = "";
+//                String openOrderQueryString = getOpenOrderQueryString();
+//                String queryStrSignature = "";
+//                try {
+//                    signature = orderManager.encode(secretKey, openOrderQueryString);
+//                    queryStrSignature = openOrderQueryString + "&signature=" + signature;
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                }
+//
+//                orderManager.sendCheckOpenOrderRequest(openOrderListener, queryStrSignature);
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+                Log.d(TAG, "accountInfo onFailure" + failureMsg);
+            }
+        };
+
+        final ServerTimeListener serverTimeListener2 = new ServerTimeListener() {
+            @Override
+            public void onSuccess(Long serverTime) {
+                MainActivity.serverTime = serverTime;
+                String signature = "";
+                String accountInfoQueryString = "";
+                String queryStrSignature = "";
+
+                try {
+                    accountInfoQueryString = getAccountInfoQueryString();
+                } catch (CustomException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    signature = orderManager.encode(secretKey, accountInfoQueryString);
+                    queryStrSignature = accountInfoQueryString + "&signature=" + signature;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                orderManager.sendAccountInfoRequest(accountInfoListener, queryStrSignature);
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
+        final CancelBuyOrderListener cancelBuyOrderListener = new CancelBuyOrderListener() {
+            @Override
+            public void onSuccess() {
+                cancelBuyOrderOnSuccessCount += 1;
+                if (cancelBuyOrderOnSuccessCount >= cancelBuyOrderIdListLength){
+                    orderManager.sendServerTimeRequest(serverTimeListener2);
+                }
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
+        final OpenOrderListener openOrderListener = new OpenOrderListener() {
+            @Override
+            public void onSuccess(List<Long> cancelBuyOrderIdList) {
+                cancelBuyOrderOnSuccessCount = 0;
+                cancelBuyOrderIdListLength = cancelBuyOrderIdList.size();
+
+                if (cancelBuyOrderIdListLength > 0) {
+                    Log.d(TAG, "cancelBuyOrderIdListLength > 0");
+                    for (Long orderId : cancelBuyOrderIdList) {
+                        String signature = "";
+                        String cancelBuyOrderQueryString = getCancelBuyOrderQueryString(orderId);
+                        String queryStrSignature = "";
+                        try {
+                            signature = orderManager.encode(secretKey, cancelBuyOrderQueryString);
+                            queryStrSignature = cancelBuyOrderQueryString + "&signature=" + signature;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        orderManager.sendCancelBuyOrderRequest(cancelBuyOrderListener, queryStrSignature);
+                    }
+                } else if (cancelBuyOrderIdListLength == 0){
+                    Log.d(TAG, "cancelBuyOrderIdListLength == 0");
+                    cancelBuyOrderListener.onSuccess();
+                }
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
+        final ServerTimeListener serverTimeListener1 = new ServerTimeListener() {
+            @Override
+            public void onSuccess(Long serverTime) {
+                MainActivity.serverTime = serverTime;
+                String signature = "";
+                String openOrderQueryString = getOpenOrderQueryString();
+                String queryStrSignature = "";
+                try {
+                    signature = orderManager.encode(secretKey, openOrderQueryString);
+                    queryStrSignature = openOrderQueryString + "&signature=" + signature;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                orderManager.sendCheckOpenOrderRequest(openOrderListener, queryStrSignature);
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
+        BollingerListener bollingerListener = new BollingerListener() {
+            @Override
+            public void onSuccess(double bollingerPrice, double buyPriceTier1, double buyPriceTier2, double buyPriceTier3, double buyPriceTier4) {
+                buyOrderTierList.clear();
+                buyPrice = bollingerPrice;
+                Log.d(TAG, "buyPrice: " + buyPrice);
+                buyOrderTier1 = buyPriceTier1;
+                buyOrderTier2 = buyPriceTier2;
+                buyOrderTier3 = buyPriceTier3;
+                buyOrderTier4 = buyPriceTier4;
+                buyOrderTierList.add(buyPriceTier1);
+                buyOrderTierList.add(buyPriceTier2);
+                buyOrderTierList.add(buyPriceTier3);
+                buyOrderTierList.add(buyPriceTier4);
+                orderManager.sendServerTimeRequest(serverTimeListener1);
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
+        klinesManager.sendDefaultKlinesRequest(bollingerListener, symbol);
+    }
+
+    private String getCancelBuyOrderQueryString(Long orderId) {
+        return "symbol=" + symbol + "&orderId=" + orderId + "&timestamp=" + serverTime;
+    }
+
+    private String getOpenOrderQueryString() {
+        return "symbol=" + symbol + "&recvWindow=5000&timestamp=" + serverTime;
+    }
+
+    private String getAccountInfoQueryString() throws CustomException {
+        if (serverTime != 0L) {
+            return "timestamp=" + serverTime;
+        } else {
+            throw new CustomException("serverTime == 0L");
+        }
+    }
+
+    private String getBuyQueryString(Double buyOrderPrice, double buyQuantity){
+        if (buyPrice != 0.0){
+//            return "symbol=" + symbol + "&side=BUY&type=LIMIT&timeInForce=GTC&quantity=" + buyQuantity + "&price=" + buyPrice + "&recvWindow=5000&timestamp=" + serverTime;
+            return "symbol=" + symbol + "&side=BUY&type=LIMIT&timeInForce=GTC&quantity=" + buyQuantity + "&price=" + buyOrderPrice + "&recvWindow=5000&timestamp=" + serverTime;
+
+        } else {
+            Log.d(TAG, "getBuyQueryString buyPrice = 0.0");
+            return "";
+        }
     }
 
     private void sendKlinesRequestTimer() {
@@ -377,5 +639,20 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+    }
+
+    public static double roundDouble(double x, int roundTodecimalPlace)
+    {
+        BigDecimal b = new BigDecimal(Double.toString(x));
+        b = b.setScale(roundTodecimalPlace, BigDecimal.ROUND_HALF_DOWN);
+        return b.doubleValue();
+    }
+}
+
+class CustomException extends Exception
+{
+    public CustomException(String message)
+    {
+        super(message);
     }
 }

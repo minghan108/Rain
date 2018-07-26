@@ -20,10 +20,11 @@ public class OkHttpConnection {
     private OnOkhttpProcessFinish mListener;
     private final static int MAX_CONCURRENCY_HTTP_CONNECTION = 3;
     private static Semaphore httpRequestThreadSemaphore = new Semaphore(MAX_CONCURRENCY_HTTP_CONNECTION);
+    private String apiKey = "";
 
 
 
-    public void getResponse(final String Url, OnOkhttpProcessFinish onOkhttpProcessFinishListener, String httpHeader){
+    public void getResponse(final String Url, OnOkhttpProcessFinish onOkhttpProcessFinishListener, String httpHeader, String httpCmd){
         try {
             httpRequestThreadSemaphore.acquire();
         } catch (InterruptedException e) {
@@ -37,8 +38,13 @@ public class OkHttpConnection {
         try {
             url = new URL(Url);
             urlConnection = (HttpURLConnection) url.openConnection();
+            if (httpHeader != ""){
+                urlConnection.setRequestProperty(httpHeader, apiKey);
+            }
+            urlConnection.setRequestMethod(httpCmd);
             urlConnection.setDefaultUseCaches(false);
             urlConnection.setUseCaches(false);
+
             urlConnection.setConnectTimeout(15000);
             urlConnection.setReadTimeout(15000);
             int responseCode = urlConnection.getResponseCode();

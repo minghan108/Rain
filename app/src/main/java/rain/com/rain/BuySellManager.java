@@ -28,7 +28,7 @@ public class BuySellManager {
                         sem.sem_post();
                     }
                 };
-                (new OkHttpConnection()).getResponse(getBuyOrderUrl(), httpListener, "");
+                (new OkHttpConnection()).getResponse(getBuyOrderUrl(), httpListener, "", "GET");
                 sem.sem_wait();
             }
         };
@@ -65,7 +65,7 @@ public class BuySellManager {
                         sem.sem_post();
                     }
                 };
-                (new OkHttpConnection()).getResponse(getBuyOrderUrl(), httpListener, "");
+                (new OkHttpConnection()).getResponse(getBuyOrderUrl(), httpListener, "", "GET");
                 sem.sem_wait();
             }
         };

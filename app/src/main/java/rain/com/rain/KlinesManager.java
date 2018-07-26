@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static rain.com.rain.MainActivity.localToGMTOffset;
+import static rain.com.rain.MainActivity.limit;
 
 
 /**
@@ -42,7 +43,7 @@ public class KlinesManager {
                         sem.sem_post();
                     }
                 };
-                (new OkHttpConnection()).getResponse(getGetPriceUrl(), httpListener, "");
+                (new OkHttpConnection()).getResponse(getGetPriceUrl(), httpListener, "", "GET");
                 sem.sem_wait();
             }
         };
@@ -72,7 +73,7 @@ public class KlinesManager {
                     }
                 };
                 String symbol = "EOSETH";
-                (new OkHttpConnection()).getResponse(getGetKlinesUrl(symbol, utcTimestampOffset), httpListener, "");
+                (new OkHttpConnection()).getResponse(getGetKlinesUrl(symbol, utcTimestampOffset), httpListener, "", "GET");
                 sem.sem_wait();
             }
         };
@@ -114,16 +115,16 @@ public class KlinesManager {
         klinesListener.onFailure(response);
     }
 
-    public void handleOnFailure(String response, AdxListener adxListener) {
+    public void handleOnFailure(String response, BollingerListener adxListener) {
         Log.d(TAG, "handleOnFailure" + response);
         adxListener.onFailure(response);
     }
 
-    public void sendDefaultKlinesRequest(final AdxListener adxListener, final String symbol) {
+    public void sendDefaultKlinesRequest(final BollingerListener adxListener, final String symbol) {
         SafeThread sendGetAllPlayableContentRequestThread = new SafeThread("sendGetAllPlayableContentRequestThread") {
             @Override
             protected void runSafe() {
-                AdxListener listener = adxListener;
+                BollingerListener listener = adxListener;
                 final Semaphore sem = new Semaphore();
                 sem.sem_open();
                 OnOkhttpProcessFinish httpListener = new OnOkhttpProcessFinish() {
@@ -141,7 +142,7 @@ public class KlinesManager {
                         sem.sem_post();
                     }
                 };
-                (new OkHttpConnection()).getResponse(getGetDefaultKlinesUrl(symbol), httpListener, "");
+                (new OkHttpConnection()).getResponse(getGetDefaultKlinesUrl(symbol), httpListener, "", "GET");
                 sem.sem_wait();
             }
         };
@@ -150,13 +151,15 @@ public class KlinesManager {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    private void handleGetDefaultKlinesResponseFromServer(String response, AdxListener adxListener, String symbol) {
+    private void handleGetDefaultKlinesResponseFromServer(String response, BollingerListener adxListener, String symbol) {
         parser.parseDefaultKlinesJsonResponse(response, adxListener, symbol);
     }
 
     private String getGetDefaultKlinesUrl(String symbol) {
 //        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=105";
-        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=500";
+//        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=50";
+        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=15m&limit=" + limit;
+
     }
 
     public void sendGetSymbolsRequest(final SymbolsListener symbolsListener) {
@@ -180,7 +183,7 @@ public class KlinesManager {
                         sem.sem_post();
                     }
                 };
-                (new OkHttpConnection()).getResponse(getGetPriceUrl(), httpListener, "");
+                (new OkHttpConnection()).getResponse(getGetPriceUrl(), httpListener, "", "GET");
                 sem.sem_wait();
             }
         };
