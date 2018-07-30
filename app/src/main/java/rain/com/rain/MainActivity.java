@@ -79,9 +79,9 @@ public class MainActivity extends AppCompatActivity {
     public static Double startMoney = 100.0;
     public static Double startCoin = 0.0;
     public double maxDiDiff = 0.0;
-    public static int limit  = 45;
+    public static int limit  = 500;
     public static Long serverTime = 0L;
-    public static String symbol = "ADAUSDT";
+    public static String symbol = "BTCUSDT";
 
 
     @Override
@@ -278,21 +278,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-
-                //buyQuantity = usdtCoin/buyPrice;
-
-
-//                String signature = "";
-//                String openOrderQueryString = getOpenOrderQueryString();
-//                String queryStrSignature = "";
-//                try {
-//                    signature = orderManager.encode(secretKey, openOrderQueryString);
-//                    queryStrSignature = openOrderQueryString + "&signature=" + signature;
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//
-//                orderManager.sendCheckOpenOrderRequest(openOrderListener, queryStrSignature);
             }
 
             @Override
@@ -423,7 +408,19 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        klinesManager.sendDefaultKlinesRequest(bollingerListener, symbol);
+        SmaListener smaListener = new SmaListener() {
+            @Override
+            public void onSuccess() {
+
+            }
+
+            @Override
+            public void onFailure(String response) {
+
+            }
+        };
+
+        klinesManager.sendDefaultKlinesRequest(smaListener, symbol);
     }
 
     private String getCancelBuyOrderQueryString(Long orderId) {

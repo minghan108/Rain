@@ -5,4 +5,7 @@ package rain.com.rain;
  */
 
 public interface SmaListener {
+    void onSuccess();
+
+    void onFailure(String response);
 }

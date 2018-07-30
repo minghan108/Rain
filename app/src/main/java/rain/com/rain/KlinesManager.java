@@ -115,30 +115,30 @@ public class KlinesManager {
         klinesListener.onFailure(response);
     }
 
-    public void handleOnFailure(String response, BollingerListener adxListener) {
+    public void handleOnFailure(String response, SmaListener smaListener) {
         Log.d(TAG, "handleOnFailure" + response);
-        adxListener.onFailure(response);
+        smaListener.onFailure(response);
     }
 
-    public void sendDefaultKlinesRequest(final BollingerListener adxListener, final String symbol) {
+    public void sendDefaultKlinesRequest(final SmaListener smaListener, final String symbol) {
         SafeThread sendGetAllPlayableContentRequestThread = new SafeThread("sendGetAllPlayableContentRequestThread") {
             @Override
             protected void runSafe() {
-                BollingerListener listener = adxListener;
+                SmaListener listener = smaListener;
                 final Semaphore sem = new Semaphore();
                 sem.sem_open();
                 OnOkhttpProcessFinish httpListener = new OnOkhttpProcessFinish() {
                     @Override
                     public void onHttpEvent(String response) {
                         Log.d(TAG, "sendGetAllPlayableContentRequest onSuccess");
-                        handleGetDefaultKlinesResponseFromServer(response, adxListener, symbol);
+                        handleGetDefaultKlinesResponseFromServer(response, smaListener, symbol);
                         sem.sem_post();
                     }
 
                     @Override
                     public void onHttpFailure(String response) {
                         Log.d(TAG, "sendGetAllPlayableContentRequest onFailure");
-                        handleOnFailure(response, adxListener);
+                        handleOnFailure(response, smaListener);
                         sem.sem_post();
                     }
                 };
@@ -151,14 +151,14 @@ public class KlinesManager {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    private void handleGetDefaultKlinesResponseFromServer(String response, BollingerListener adxListener, String symbol) {
-        parser.parseDefaultKlinesJsonResponse(response, adxListener, symbol);
+    private void handleGetDefaultKlinesResponseFromServer(String response, SmaListener smaListener, String symbol) {
+        parser.parseDefaultKlinesJsonResponse(response, smaListener, symbol);
     }
 
     private String getGetDefaultKlinesUrl(String symbol) {
 //        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=105";
 //        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=50";
-        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=15m&limit=" + limit;
+        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=" + limit;
 
     }
 

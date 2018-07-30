@@ -162,7 +162,7 @@ public class Parser {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    public void parseDefaultKlinesJsonResponse(String response, BollingerListener adxListener, String symbol){
+    public void parseDefaultKlinesJsonResponse(String response, SmaListener smaListener, String symbol){
         klinesCloseLinkedList.clear();
         klinesHighLinkedList.clear();
         klinesLowLinkedList.clear();
@@ -185,12 +185,12 @@ public class Parser {
             e.printStackTrace();
         }
 
-        calculateSma(symbol, adxListener);
+        calculateSma(symbol, smaListener);
 
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    private void calculateSma(String symbol, BollingerListener adxListener) {
+    private void calculateSma(String symbol, SmaListener smaListener) {
         Log.d(TAG, "calculateSma");
         Double[] highPriceArray = klinesHighLinkedList.toArray(new Double[klinesHighLinkedList.size()]);
         Double[] lowPriceArray = klinesLowLinkedList.toArray(new Double[klinesLowLinkedList.size()]);
@@ -212,8 +212,9 @@ public class Parser {
 //        simpleSMA.calculateSimpleMovingAverage(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, klinesListener, symbol);
 
 
-        //adxDmModel.calculateSma(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
-        adxDmModel.calculateBol(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
+        //adxDmModel.calculateSupportResistance(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
+        adxDmModel.calculateSma(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
+//        adxDmModel.calculateBol(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
         //adxDmModel.calculateBolOptimization(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
         //adxDmModel.calculateAdxDi(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
 

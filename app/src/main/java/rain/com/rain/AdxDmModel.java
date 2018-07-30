@@ -26,7 +26,7 @@ public class AdxDmModel {
     private boolean isFirstLaunch = true;
 
 
-    public void calculateSma(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, AdxListener adxListener, String symbol){
+    public void calculateSupportResistance(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, AdxListener adxListener, String symbol){
         double[] smaOutArray = new double[volume.length];
         ArrayList<Double> smaOutArrayList = new ArrayList<>();
         boolean up = false;
@@ -132,6 +132,78 @@ public class AdxDmModel {
             }
 
             adxListener.onSuccess(displayString);
+        }
+    }
+
+    public void calculateSma(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
+        double[] smaOutArray = new double[closePrice.length];
+        ArrayList<Double> smaOutArrayList = new ArrayList<>();
+        ArrayList<Integer> minimaIndexArrayList = new ArrayList<>();
+        double maxPercentProf = 0.0;
+        double tempMaxPercentProf = 0.0;
+
+        for(int m = 2; m < 60; m++) {
+            Log.d(TAG, " ");
+            Core c = new Core();
+            MInteger begin = new MInteger();
+            MInteger length = new MInteger();
+            RetCode smaRetCode = c.sma(0, closePrice.length - 1, closePrice, m, begin, length, smaOutArray);
+            tempMaxPercentProf = 0.0;
+            minimaIndexArrayList.clear();
+            //smaOutArrayList = removeZeroInArray(smaOutArray);
+            Log.d(TAG, "calculateSma");
+
+            if (smaRetCode == RetCode.Success) {
+                int index = 0;
+                try {
+                    for (double smaPrice : smaOutArray) {
+                        double delta1 = 0.0;
+                        double delta2 = 0.0;
+                        double delta3 = 0.0;
+                        double delta4 = 0.0;
+
+
+                        if (index - 2 >= 0 && index + 2 < smaOutArray.length) {
+
+                            if (smaOutArray[index - 2] != 0.0 && smaOutArray[index - 1] != 0.0 && smaOutArray[index] != 0.0 && smaOutArray[index + 1] != 0.0 && smaOutArray[index + 2] != 0.0) {
+                                delta1 = BigDecimal.valueOf(smaOutArray[index - 1]).subtract(BigDecimal.valueOf(smaOutArray[index - 2])).doubleValue();
+                                delta2 = BigDecimal.valueOf(smaOutArray[index]).subtract(BigDecimal.valueOf(smaOutArray[index - 1])).doubleValue();
+                                delta3 = BigDecimal.valueOf(smaOutArray[index + 1]).subtract(BigDecimal.valueOf(smaOutArray[index])).doubleValue();
+                                delta4 = BigDecimal.valueOf(smaOutArray[index + 2]).subtract(BigDecimal.valueOf(smaOutArray[index + 1])).doubleValue();
+
+
+                                if (delta1 < 0 && delta2 < 0 && delta3 > 0 && delta4 > 0) {
+                                    minimaIndexArrayList.add(index);
+                                    //Log.d(TAG, "smaPrice: " + smaPrice);
+                                }
+                            }
+                        }
+
+                        index += 1;
+                    }
+
+                    for (int minimaIndex : minimaIndexArrayList) {
+                        tempMaxPercentProf += (highPrice[minimaIndex + 1] - closePrice[minimaIndex]) / closePrice[minimaIndex];
+//                        Log.d(TAG, " ");
+                        Log.d(TAG, "closePrice[minimaIndex]: " + closePrice[minimaIndex] + " index: " + minimaIndex);
+                        Log.d(TAG, "highPrice[minimaIndex + 1]: " + highPrice[minimaIndex + 1] + " index: " + (minimaIndex + 1));
+//                        Log.d(TAG, "highPrice[minimaIndex + 2]: " + highPrice[minimaIndex + 2] + " index: " + (minimaIndex + 2));
+//                        Log.d(TAG, "highPrice[minimaIndex + 3]: " + highPrice[minimaIndex + 3] + " index: " + (minimaIndex + 3));
+
+                    }
+
+                    Log.d(TAG, "tempMaxPercentProf: " + tempMaxPercentProf);
+
+                    if (tempMaxPercentProf > maxPercentProf){
+                        maxPercentProf = tempMaxPercentProf;
+                        Log.d(TAG, "maxPercentProf: " + maxPercentProf);
+                        Log.d(TAG, "smaTimePeriod: " + m);
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
