@@ -38,6 +38,7 @@ public class Parser {
     private LinkedList<Double> klinesLowLinkedList = new LinkedList<>();
     private LinkedList<Double> klinesCloseLinkedList = new LinkedList<>();
     private LinkedList<Double> klinesVolumeLinkedList = new LinkedList<>();
+    private ArrayList<Double> closePriceArrayList = new ArrayList<>();
     private double hunDayPriceAvg = 0;
     private SimpleMovingAverageExample simpleSMA = new SimpleMovingAverageExample();
     private AdxDmModel adxDmModel = new AdxDmModel();
@@ -132,41 +133,42 @@ public class Parser {
     }
 
     public void parseKlinesJsonResponse(String response, KlinesListener klinesListener){
-        long utcTimeStamp = 0;
-
-        try {
-            JSONArray jsonArray = new JSONArray(response);
-            Log.d(TAG, "jsonArray length: " + jsonArray.length());
-            for (int i = 0; i < jsonArray.length(); i++) {
-                //Log.d(TAG, "jsonArray: " + jsonArray.getJSONArray(i).toString());
-                //Log.d(TAG, "jsonArray closing price: " + jsonArray.getJSONArray(i).get(1).toString());
-                //hundredDayPriceAvg += Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString());
-                klinesCloseLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString()));
-                utcTimeStamp = Long.parseLong(jsonArray.getJSONArray(i).get(0).toString());
-                hunDayPriceAvg += Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString());
-            }
-
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        if (utcTimeStamp < (localToGMT() - 1800000L)){
-            klinesListener.repeatKlinesRequest(utcTimeStamp + 1800000L);
-        } else {
-            klinesListener.onSuccess();
-            //calculateSma();
-            Log.d(TAG, "hunDayPriceAvg: " + hunDayPriceAvg/klinesCloseLinkedList.size());
-        }
+//        long utcTimeStamp = 0;
+//
+//        try {
+//            JSONArray jsonArray = new JSONArray(response);
+//            Log.d(TAG, "jsonArray length: " + jsonArray.length());
+//            for (int i = 0; i < jsonArray.length(); i++) {
+//                //Log.d(TAG, "jsonArray: " + jsonArray.getJSONArray(i).toString());
+//                //Log.d(TAG, "jsonArray closing price: " + jsonArray.getJSONArray(i).get(1).toString());
+//                //hundredDayPriceAvg += Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString());
+//                klinesCloseLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString()));
+//                utcTimeStamp = Long.parseLong(jsonArray.getJSONArray(i).get(0).toString());
+//                hunDayPriceAvg += Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString());
+//            }
+//
+//
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
+//
+//        if (utcTimeStamp < (localToGMT() - 1800000L)){
+//            klinesListener.repeatKlinesRequest(utcTimeStamp + 1800000L);
+//        } else {
+//            klinesListener.onSuccess();
+//            //calculateSma();
+//            Log.d(TAG, "hunDayPriceAvg: " + hunDayPriceAvg/klinesCloseLinkedList.size());
+//        }
 
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    public void parseDefaultKlinesJsonResponse(String response, BollingerListener adxListener, String symbol){
-        klinesCloseLinkedList.clear();
-        klinesHighLinkedList.clear();
-        klinesLowLinkedList.clear();
-        klinesVolumeLinkedList.clear();
+    public void parseDefaultKlinesJsonResponse(String response, KlinesListener klinesListener, String symbol){
+//        klinesCloseLinkedList.clear();
+//        klinesHighLinkedList.clear();
+//        klinesLowLinkedList.clear();
+//        klinesVolumeLinkedList.clear();
+        closePriceArrayList.clear();
 
         try {
             JSONArray jsonArray = new JSONArray(response);
@@ -174,16 +176,18 @@ public class Parser {
             for (int i = 0; i < jsonArray.length(); i++) {
                 //Log.d(TAG, "jsonArray: " + jsonArray.getJSONArray(i).toString());
                 //Log.d(TAG, "jsonArray closing price: " + jsonArray.getJSONArray(i).get(4).toString());
-                klinesHighLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(2).toString()));
-                klinesLowLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(3).toString()));
-                klinesCloseLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString()));
-                klinesVolumeLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(5).toString()));
+//                klinesHighLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(2).toString()));
+//                klinesLowLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(3).toString()));
+                closePriceArrayList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString()));
+//                klinesVolumeLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(5).toString()));
 
             }
 
         } catch (JSONException e) {
             e.printStackTrace();
         }
+
+        klinesListener.onSuccess(closePriceArrayList);
 
         calculateSma(symbol, adxListener);
 

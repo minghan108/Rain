@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     Timer timer;
     private String breakoutTextViewString = "";
     private List<String> symbolsList = new ArrayList<>();
+    private List<Double> closePriceList = new ArrayList<>();
     private String[] symbolsArray = {"BTCUSDT", "LTCUSDT", "BNBUSDT", "ETHUSDT", "BCCUSDT", "ADAUSDT", "QTUMUSDT", "NEOUSDT"};
     private int symbolsIndex = 0;
     private double buyPrice = 0.0;
@@ -81,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
     public double maxDiDiff = 0.0;
     public static int limit  = 45;
     public static Long serverTime = 0L;
-    public static String symbol = "ADAUSDT";
+    public static String symbol = "TUSDUSDT";
 
 
     @Override
@@ -423,7 +424,19 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        klinesManager.sendDefaultKlinesRequest(bollingerListener, symbol);
+        KlinesListener klinesListener = new KlinesListener() {
+            @Override
+            public void onSuccess(ArrayList<Double> closePriceArrayList) {
+                closePriceList = closePriceArrayList;
+            }
+
+            @Override
+            public void onFailure(String response) {
+
+            }
+        };
+
+        klinesManager.sendDefaultKlinesRequest(klinesListener, symbol);
     }
 
     private String getCancelBuyOrderQueryString(Long orderId) {
@@ -527,8 +540,8 @@ public class MainActivity extends AppCompatActivity {
     private void sendKlinesRequest(long utcTimestampOffset) {
         final KlinesListener klinesListener = new KlinesListener() {
             @Override
-            public void onSuccess() {
-
+            public void onSuccess(ArrayList<Double> closePriceArrayList) {
+                closePriceList = closePriceArrayList;
             }
 
             @Override
@@ -536,10 +549,6 @@ public class MainActivity extends AppCompatActivity {
 
             }
 
-            @Override
-            public void repeatKlinesRequest(long utcTimestamp) {
-                sendKlinesRequest(utcTimestamp);
-            }
         };
 
         klinesManager.sendKlinesRequest(klinesListener, utcTimestampOffset);
