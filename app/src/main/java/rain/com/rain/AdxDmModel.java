@@ -141,70 +141,126 @@ public class AdxDmModel {
         ArrayList<Integer> minimaIndexArrayList = new ArrayList<>();
         double maxPercentProf = 0.0;
         double tempMaxPercentProf = 0.0;
+        ArrayList<Double> highLowPriceDiffList = new ArrayList<>();
 
-        for(int m = 2; m < 60; m++) {
-            Log.d(TAG, " ");
+        double highLowPriceDiff = 0.0;
+        double totalDiffPrice = 0.0;
+
+//        for(Double cPrice : closePrice){
+//            Log.d(TAG, "closePrice: " + cPrice);
+//        }
+
+//        for (int k = 0; k < closePrice.length; k++){
+//            highLowPriceDiff = 0.0;
+//            highLowPriceDiff = highPrice[k] - lowPrice[k];
+//            Log.d(TAG, "highLowPriceDiff: " + highLowPriceDiff);
+//            totalDiffPrice += highLowPriceDiff;
+//        }
+//
+//        Log.d(TAG, "averageDiff: " + (totalDiffPrice/closePrice.length));
+
             Core c = new Core();
             MInteger begin = new MInteger();
             MInteger length = new MInteger();
-            RetCode smaRetCode = c.sma(0, closePrice.length - 1, closePrice, m, begin, length, smaOutArray);
+            RetCode smaRetCode = c.sma(0, closePrice.length - 1, closePrice, 7, begin, length, smaOutArray);
             tempMaxPercentProf = 0.0;
             minimaIndexArrayList.clear();
-            //smaOutArrayList = removeZeroInArray(smaOutArray);
+            smaOutArrayList = removeZeroInArray(smaOutArray);
+            Log.d(TAG, "smaOutArrayList.Size: " + smaOutArrayList.size());
+            int tempAddZeroIndex = 500-smaOutArrayList.size();
+
+            for (int n = 0; n < tempAddZeroIndex; n++){
+                smaOutArrayList.add(0, 0.0);
+            }
+            Log.d(TAG, "smaOutArrayList.Size: " + smaOutArrayList.size());
+
             Log.d(TAG, "calculateSma");
+            Double smaDelta = 0.0;
 
             if (smaRetCode == RetCode.Success) {
                 int index = 0;
-                try {
-                    for (double smaPrice : smaOutArray) {
-                        double delta1 = 0.0;
-                        double delta2 = 0.0;
-                        double delta3 = 0.0;
-                        double delta4 = 0.0;
+                double previousSmaDelta = 0.0;
 
-
-                        if (index - 2 >= 0 && index + 2 < smaOutArray.length) {
-
-                            if (smaOutArray[index - 2] != 0.0 && smaOutArray[index - 1] != 0.0 && smaOutArray[index] != 0.0 && smaOutArray[index + 1] != 0.0 && smaOutArray[index + 2] != 0.0) {
-                                delta1 = BigDecimal.valueOf(smaOutArray[index - 1]).subtract(BigDecimal.valueOf(smaOutArray[index - 2])).doubleValue();
-                                delta2 = BigDecimal.valueOf(smaOutArray[index]).subtract(BigDecimal.valueOf(smaOutArray[index - 1])).doubleValue();
-                                delta3 = BigDecimal.valueOf(smaOutArray[index + 1]).subtract(BigDecimal.valueOf(smaOutArray[index])).doubleValue();
-                                delta4 = BigDecimal.valueOf(smaOutArray[index + 2]).subtract(BigDecimal.valueOf(smaOutArray[index + 1])).doubleValue();
-
-
-                                if (delta1 < 0 && delta2 < 0 && delta3 > 0 && delta4 > 0) {
-                                    minimaIndexArrayList.add(index);
-                                    //Log.d(TAG, "smaPrice: " + smaPrice);
-                                }
-                            }
-                        }
-
-                        index += 1;
+                for(Double smaPrice : smaOutArrayList){
+                    if(index != 0){
+                        smaDelta = smaOutArrayList.get(index) - smaOutArrayList.get(index - 1);
+                        Log.d(TAG, " ");
+                        Log.d(TAG, "smaPrice: " + smaPrice);
+                        Log.d(TAG, "smaDelta: " + smaDelta);
+                        double smaDeltaDelta = smaDelta - previousSmaDelta;
+                        Log.d(TAG, "smaDeltaDelta: " + smaDeltaDelta);
+                        Log.d(TAG, "closePrice: " + closePrice[index]);
+                        previousSmaDelta = smaDelta;
                     }
-
-                    for (int minimaIndex : minimaIndexArrayList) {
-                        tempMaxPercentProf += (highPrice[minimaIndex + 1] - closePrice[minimaIndex]) / closePrice[minimaIndex];
-//                        Log.d(TAG, " ");
-                        Log.d(TAG, "closePrice[minimaIndex]: " + closePrice[minimaIndex] + " index: " + minimaIndex);
-                        Log.d(TAG, "highPrice[minimaIndex + 1]: " + highPrice[minimaIndex + 1] + " index: " + (minimaIndex + 1));
-//                        Log.d(TAG, "highPrice[minimaIndex + 2]: " + highPrice[minimaIndex + 2] + " index: " + (minimaIndex + 2));
-//                        Log.d(TAG, "highPrice[minimaIndex + 3]: " + highPrice[minimaIndex + 3] + " index: " + (minimaIndex + 3));
-
-                    }
-
-                    Log.d(TAG, "tempMaxPercentProf: " + tempMaxPercentProf);
-
-                    if (tempMaxPercentProf > maxPercentProf){
-                        maxPercentProf = tempMaxPercentProf;
-                        Log.d(TAG, "maxPercentProf: " + maxPercentProf);
-                        Log.d(TAG, "smaTimePeriod: " + m);
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    index += 1;
                 }
             }
-        }
+
+
+
+//        for(int m = 2; m < 60; m++) {
+//            Log.d(TAG, " ");
+//            Core c = new Core();
+//            MInteger begin = new MInteger();
+//            MInteger length = new MInteger();
+//            RetCode smaRetCode = c.sma(0, closePrice.length - 1, closePrice, m, begin, length, smaOutArray);
+//            tempMaxPercentProf = 0.0;
+//            minimaIndexArrayList.clear();
+//            //smaOutArrayList = removeZeroInArray(smaOutArray);
+//            Log.d(TAG, "calculateSma");
+//
+//            if (smaRetCode == RetCode.Success) {
+//                int index = 0;
+//                try {
+//                    for (double smaPrice : smaOutArray) {
+//                        double delta1 = 0.0;
+//                        double delta2 = 0.0;
+//                        double delta3 = 0.0;
+//                        double delta4 = 0.0;
+//
+//
+//                        if (index - 2 >= 0 && index + 2 < smaOutArray.length) {
+//
+//                            if (smaOutArray[index - 2] != 0.0 && smaOutArray[index - 1] != 0.0 && smaOutArray[index] != 0.0 && smaOutArray[index + 1] != 0.0 && smaOutArray[index + 2] != 0.0) {
+//                                delta1 = BigDecimal.valueOf(smaOutArray[index - 1]).subtract(BigDecimal.valueOf(smaOutArray[index - 2])).doubleValue();
+//                                delta2 = BigDecimal.valueOf(smaOutArray[index]).subtract(BigDecimal.valueOf(smaOutArray[index - 1])).doubleValue();
+//                                delta3 = BigDecimal.valueOf(smaOutArray[index + 1]).subtract(BigDecimal.valueOf(smaOutArray[index])).doubleValue();
+//                                delta4 = BigDecimal.valueOf(smaOutArray[index + 2]).subtract(BigDecimal.valueOf(smaOutArray[index + 1])).doubleValue();
+//
+//
+//                                if (delta1 < 0 && delta2 < 0 && delta3 > 0 && delta4 > 0) {
+//                                    minimaIndexArrayList.add(index);
+//                                    //Log.d(TAG, "smaPrice: " + smaPrice);
+//                                }
+//                            }
+//                        }
+//
+//                        index += 1;
+//                    }
+//
+//                    for (int minimaIndex : minimaIndexArrayList) {
+//                        tempMaxPercentProf += (highPrice[minimaIndex + 1] - closePrice[minimaIndex]) / closePrice[minimaIndex];
+////                        Log.d(TAG, " ");
+//                        Log.d(TAG, "closePrice[minimaIndex]: " + closePrice[minimaIndex] + " index: " + minimaIndex);
+//                        Log.d(TAG, "highPrice[minimaIndex + 1]: " + highPrice[minimaIndex + 1] + " index: " + (minimaIndex + 1));
+////                        Log.d(TAG, "highPrice[minimaIndex + 2]: " + highPrice[minimaIndex + 2] + " index: " + (minimaIndex + 2));
+////                        Log.d(TAG, "highPrice[minimaIndex + 3]: " + highPrice[minimaIndex + 3] + " index: " + (minimaIndex + 3));
+//
+//                    }
+//
+//                    Log.d(TAG, "tempMaxPercentProf: " + tempMaxPercentProf);
+//
+//                    if (tempMaxPercentProf > maxPercentProf){
+//                        maxPercentProf = tempMaxPercentProf;
+//                        Log.d(TAG, "maxPercentProf: " + maxPercentProf);
+//                        Log.d(TAG, "smaTimePeriod: " + m);
+//                    }
+//
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        }
     }
 
     public void calculateBol(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, BollingerListener adxListener, String symbol){
