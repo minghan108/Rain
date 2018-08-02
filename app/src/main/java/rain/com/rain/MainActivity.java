@@ -28,7 +28,6 @@ public class MainActivity extends AppCompatActivity {
     String TAG = "MainActivity";
     Timer timer;
     private String breakoutTextViewString = "";
-    private List<String> symbolsList = new ArrayList<>();
     private String[] symbolsArray = {"BTCUSDT", "LTCUSDT", "BNBUSDT", "ETHUSDT", "BCCUSDT", "ADAUSDT", "QTUMUSDT", "NEOUSDT"};
     private int symbolsIndex = 0;
     private double buyPrice = 0.0;
@@ -66,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
         IN_BUY_STATE,
         IN_SELL_STATE
     }
+    public static List<String> symbolsList = new ArrayList<>();
     public static HashMap<String, Boolean> symbolBreakoutMap = new HashMap<>();
     public static HashMap<String, Balance> balanceHashMap = new HashMap<>();
     public static boolean isFirstScanComplete = false;
@@ -81,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
     public double maxDiDiff = 0.0;
     public static int limit  = 500;
     public static Long serverTime = 0L;
-    public static String symbol = "BTCUSDT";
+    public static String symbol = "EOSBTC";
 
 
     @Override
@@ -109,10 +109,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume(){
         super.onResume();
-//        sendGetSymbolsRequest();
+        sendGetSymbolsRequest();
 
 //        sendDefKlinesRequest(symbolsArray[symbolsIndex]);
-        sendDefKlinesRequest(symbol);
+        //sendDefKlinesRequest(symbol);
         //sendCurrentPriceRequest();
         //resendKlinesRequest();
         //sendKlinesRequest(localToGMTOffset());
@@ -409,14 +409,22 @@ public class MainActivity extends AppCompatActivity {
         };
 
         SmaListener smaListener = new SmaListener() {
+            int symIndex = 0;
+
             @Override
             public void onSuccess() {
-
+                if (symbolsIndex + 1 < (symbolsList.size())) {
+                    symIndex += 1;
+                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
+                }
             }
 
             @Override
             public void onFailure(String response) {
-
+                if (symbolsIndex + 1 < (symbolsList.size())) {
+                    symIndex += 1;
+                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
+                }
             }
         };
 
@@ -551,9 +559,7 @@ public class MainActivity extends AppCompatActivity {
                 symbolsList = symbols;
                 Log.d(TAG, "symbolList.Size(): " + symbolsList.size());
 
-
-                sendDefKlinesRequest(symbolsList.get(symbolsIndex));
-
+                sendDefKlinesRequest(symbolsList.get(0));
             }
 
             @Override

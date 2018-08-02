@@ -34,6 +34,7 @@ public class Parser {
     String[] symbolArray;
     private boolean isSymbolArrayInit = false;
     public static LinkedList<HashMap<String, String>> currentPriceHashMapLinkedList = new LinkedList<>();
+    private LinkedList<Double> klinesOpenLinkedList = new LinkedList<>();
     private LinkedList<Double> klinesHighLinkedList = new LinkedList<>();
     private LinkedList<Double> klinesLowLinkedList = new LinkedList<>();
     private LinkedList<Double> klinesCloseLinkedList = new LinkedList<>();
@@ -163,6 +164,7 @@ public class Parser {
 
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void parseDefaultKlinesJsonResponse(String response, SmaListener smaListener, String symbol){
+        klinesOpenLinkedList.clear();
         klinesCloseLinkedList.clear();
         klinesHighLinkedList.clear();
         klinesLowLinkedList.clear();
@@ -174,6 +176,7 @@ public class Parser {
             for (int i = 0; i < jsonArray.length(); i++) {
                 //Log.d(TAG, "jsonArray: " + jsonArray.getJSONArray(i).toString());
                 //Log.d(TAG, "jsonArray closing price: " + jsonArray.getJSONArray(i).get(4).toString());
+                klinesOpenLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(1).toString()));
                 klinesHighLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(2).toString()));
                 klinesLowLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(3).toString()));
                 klinesCloseLinkedList.add(Double.parseDouble(jsonArray.getJSONArray(i).get(4).toString()));
@@ -192,15 +195,18 @@ public class Parser {
     @RequiresApi(api = Build.VERSION_CODES.N)
     private void calculateSma(String symbol, SmaListener smaListener) {
         Log.d(TAG, "calculateSma");
+        Double[] openPriceArray = klinesOpenLinkedList.toArray(new Double[klinesOpenLinkedList.size()]);
         Double[] highPriceArray = klinesHighLinkedList.toArray(new Double[klinesHighLinkedList.size()]);
         Double[] lowPriceArray = klinesLowLinkedList.toArray(new Double[klinesLowLinkedList.size()]);
         Double[] closePriceArray = klinesCloseLinkedList.toArray(new Double[klinesCloseLinkedList.size()]);
         Double[] volumePriceArray = klinesVolumeLinkedList.toArray(new Double[klinesVolumeLinkedList.size()]);
+        Log.d(TAG, "klinesOpenLinkedList.Size: " + klinesOpenLinkedList.size());
         Log.d(TAG, "klinesHighLinkedList.Size: " + klinesHighLinkedList.size());
         Log.d(TAG, "klinesLowLinkedList.Size: " + klinesLowLinkedList.size());
         Log.d(TAG, "klinesCloseLinkedList.Size: " + klinesCloseLinkedList.size());
         Log.d(TAG, "klinesVolumeLinkedList.Size: " + klinesVolumeLinkedList.size());
 
+        double[] openPricePrimArray = ArrayUtils.toPrimitive(openPriceArray);
         double[] highPricePrimArray = ArrayUtils.toPrimitive(highPriceArray);
         double[] lowPricePrimArray = ArrayUtils.toPrimitive(lowPriceArray);
         double[] closePricePrimArray = ArrayUtils.toPrimitive(closePriceArray);
@@ -213,7 +219,7 @@ public class Parser {
 
 
         //adxDmModel.calculateSupportResistance(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
-        adxDmModel.calculateSma(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
+        adxDmModel.calculateSma(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
 //        adxDmModel.calculateBol(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
         //adxDmModel.calculateBolOptimization(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
         //adxDmModel.calculateAdxDi(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);

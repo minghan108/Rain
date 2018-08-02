@@ -8,6 +8,7 @@ import com.tictactec.ta.lib.MInteger;
 import com.tictactec.ta.lib.RetCode;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -135,75 +136,206 @@ public class AdxDmModel {
         }
     }
 
-    public void calculateSma(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
-        double[] smaOutArray = new double[closePrice.length];
-        ArrayList<Double> smaOutArrayList = new ArrayList<>();
-        ArrayList<Integer> minimaIndexArrayList = new ArrayList<>();
-        double maxPercentProf = 0.0;
-        double tempMaxPercentProf = 0.0;
-
-        for(int m = 2; m < 60; m++) {
-            Log.d(TAG, " ");
-            Core c = new Core();
-            MInteger begin = new MInteger();
-            MInteger length = new MInteger();
-            RetCode smaRetCode = c.sma(0, closePrice.length - 1, closePrice, m, begin, length, smaOutArray);
-            tempMaxPercentProf = 0.0;
-            minimaIndexArrayList.clear();
-            //smaOutArrayList = removeZeroInArray(smaOutArray);
-            Log.d(TAG, "calculateSma");
-
-            if (smaRetCode == RetCode.Success) {
-                int index = 0;
-                try {
-                    for (double smaPrice : smaOutArray) {
-                        double delta1 = 0.0;
-                        double delta2 = 0.0;
-                        double delta3 = 0.0;
-                        double delta4 = 0.0;
+    public void calculateSma(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
+        Log.d(TAG, "symbol: " + symbol);
+        int optInTimePeriod = 200;
+        double mult = 3.0;
+        double[] hlc3VolumeSmaOutArray = new double[closePrice.length];
+        double[] volumeSmaOutArray = new double[closePrice.length];
+        double[] hlc3Array = new double[closePrice.length];
+        ArrayList<Double> hlc3ArrayList = new ArrayList<>();
+        ArrayList<Double> hlcVolumeArrayList = new ArrayList<>();
+        ArrayList<Double> vwmaArrayList = new ArrayList<>();
+        ArrayList<Double> hlc3VolumeSmaOutArrayList = new ArrayList<>();
+        ArrayList<Double> volumeSmaOutArrayList = new ArrayList<>();
+        ArrayList<Double> hlc3StdOutArrayList = new ArrayList<>();
+        ArrayList<Double> cumHlc3VolArrayList = new ArrayList<>();
+        ArrayList<Double> cumVolArrayList = new ArrayList<>();
+        ArrayList<Double> devArrayList = new ArrayList<>();
+        ArrayList<Double> lower5ArrayList = new ArrayList<>();
+        ArrayList<Double> lower6ArrayList = new ArrayList<>();
+        double[] hlc3VolumeArray = new double[closePrice.length];
+        double[] hlc3StdOutArray = new double[closePrice.length];
 
 
-                        if (index - 2 >= 0 && index + 2 < smaOutArray.length) {
+        int index = 0;
 
-                            if (smaOutArray[index - 2] != 0.0 && smaOutArray[index - 1] != 0.0 && smaOutArray[index] != 0.0 && smaOutArray[index + 1] != 0.0 && smaOutArray[index + 2] != 0.0) {
-                                delta1 = BigDecimal.valueOf(smaOutArray[index - 1]).subtract(BigDecimal.valueOf(smaOutArray[index - 2])).doubleValue();
-                                delta2 = BigDecimal.valueOf(smaOutArray[index]).subtract(BigDecimal.valueOf(smaOutArray[index - 1])).doubleValue();
-                                delta3 = BigDecimal.valueOf(smaOutArray[index + 1]).subtract(BigDecimal.valueOf(smaOutArray[index])).doubleValue();
-                                delta4 = BigDecimal.valueOf(smaOutArray[index + 2]).subtract(BigDecimal.valueOf(smaOutArray[index + 1])).doubleValue();
+        for (double highP : highPrice){
+//            Log.d(TAG, "highPrice: " + highPrice[index]);
+//            Log.d(TAG, "lowPrice: " + lowPrice[index]);
+//            Log.d(TAG, "openPrice: " + openPrice[index]);
+//            Log.d(TAG, "closePrice: " + closePrice[index]);
+            BigDecimal highBD = BigDecimal.valueOf(highPrice[index]);
+            BigDecimal lowBD = BigDecimal.valueOf(lowPrice[index]);
+            BigDecimal openBD = BigDecimal.valueOf(openPrice[index]);
+            BigDecimal closeBD = BigDecimal.valueOf(closePrice[index]);
+            BigDecimal volumeBD = BigDecimal.valueOf(volume[index]);
+            BigDecimal hlc3BD = (highBD.add(lowBD).add(closeBD)).divide(BigDecimal.valueOf(3.0), 9, RoundingMode.HALF_UP);
+            BigDecimal hlc3VolumeBD = hlc3BD.multiply(volumeBD);
+
+            hlc3Array[index] = hlc3BD.doubleValue();
+            hlc3ArrayList.add(hlc3BD.doubleValue());
+            hlcVolumeArrayList.add(hlc3VolumeBD.doubleValue());
+            hlc3VolumeArray[index] = hlc3VolumeBD.doubleValue();
+            index += 1;
+        }
+
+//        int volIndex2 = 199;
+//        for (int volIndex1 = 0; volIndex2 < hlc3Array.length; volIndex1++){
+//            double cumHlc3Vol = 0.0;
+//            double cumVol = 0.0;
+//            for(int indx = 0; indx < 200; indx++){
+//                cumHlc3Vol = BigDecimal.valueOf(cumHlc3Vol).add(BigDecimal.valueOf(hlc3VolumeArray[indx + volIndex1])).doubleValue();
+//                cumVol = BigDecimal.valueOf(cumVol).add(BigDecimal.valueOf(volume[indx + volIndex1])).doubleValue();
+//            }
+//            cumHlc3VolArrayList.add(cumHlc3Vol);
+//            cumVolArrayList.add(cumVol);
+//            volIndex2 += 1;
+//        }
+//
+//
+//
+//        Log.d(TAG, "cumHlc3VolArrayList.size: " + cumHlc3VolArrayList.size());
+//        Log.d(TAG, "cumVolArrayList.size: " + cumVolArrayList.size());
+//        Log.d(TAG, "hlcVolumeArrayList.size: " + hlcVolumeArrayList.size());
 
 
-                                if (delta1 < 0 && delta2 < 0 && delta3 > 0 && delta4 > 0) {
-                                    minimaIndexArrayList.add(index);
-                                    //Log.d(TAG, "smaPrice: " + smaPrice);
-                                }
-                            }
-                        }
+        Core c = new Core();
+        MInteger begin = new MInteger();
+        MInteger length = new MInteger();
+        RetCode hlc3VolumeSmaRetCode = c.sma(0, hlc3VolumeArray.length - 1, hlc3VolumeArray, optInTimePeriod, begin, length, hlc3VolumeSmaOutArray);
+        RetCode volumeSmaRetCode = c.sma(0, volume.length - 1, volume, optInTimePeriod, begin, length, volumeSmaOutArray);
+        hlc3VolumeSmaOutArrayList = removeZeroInArray(hlc3VolumeSmaOutArray);
+        volumeSmaOutArrayList = removeZeroInArray(volumeSmaOutArray);
 
-                        index += 1;
-                    }
+        if (hlc3VolumeSmaRetCode == RetCode.Success && volumeSmaRetCode == RetCode.Success) {
+            int smaIndex = 0;
 
-                    for (int minimaIndex : minimaIndexArrayList) {
-                        tempMaxPercentProf += (highPrice[minimaIndex + 1] - closePrice[minimaIndex]) / closePrice[minimaIndex];
-//                        Log.d(TAG, " ");
-                        Log.d(TAG, "closePrice[minimaIndex]: " + closePrice[minimaIndex] + " index: " + minimaIndex);
-                        Log.d(TAG, "highPrice[minimaIndex + 1]: " + highPrice[minimaIndex + 1] + " index: " + (minimaIndex + 1));
-//                        Log.d(TAG, "highPrice[minimaIndex + 2]: " + highPrice[minimaIndex + 2] + " index: " + (minimaIndex + 2));
-//                        Log.d(TAG, "highPrice[minimaIndex + 3]: " + highPrice[minimaIndex + 3] + " index: " + (minimaIndex + 3));
-
-                    }
-
-                    Log.d(TAG, "tempMaxPercentProf: " + tempMaxPercentProf);
-
-                    if (tempMaxPercentProf > maxPercentProf){
-                        maxPercentProf = tempMaxPercentProf;
-                        Log.d(TAG, "maxPercentProf: " + maxPercentProf);
-                        Log.d(TAG, "smaTimePeriod: " + m);
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            for(Double sma : hlc3VolumeSmaOutArrayList){
+                BigDecimal hlc3VolumeSmaBD = BigDecimal.valueOf(hlc3VolumeSmaOutArrayList.get(smaIndex));
+                BigDecimal volumeSmaBD = BigDecimal.valueOf(volumeSmaOutArrayList.get(smaIndex));
+                BigDecimal vwmaBD = hlc3VolumeSmaBD.divide(volumeSmaBD, 9, RoundingMode.HALF_UP);
+                vwmaArrayList.add(vwmaBD.doubleValue());
+                smaIndex += 1;
             }
+
+//            for (Double sma : hlc3VolumeSmaOutArrayList) {
+//                Log.d(TAG, "hlc3VolumeSmaOutArrayList: " + sma);
+//                Log.d(TAG, "volumeSmaOutArrayList: " + volumeSmaOutArrayList.get(smaIndex));
+////                Log.d(TAG, "hlc3VolumeSmaOutArrayList.size(): " + hlc3VolumeSmaOutArrayList.size());
+////                Log.d(TAG, "volumeSmaOutArrayList.size(): " + volumeSmaOutArrayList.size());
+//                smaIndex += 1;
+//            }
+        }
+
+        RetCode hlc3StdRetCode = this.stdDev(0, hlc3Array.length - 1, hlc3Array, optInTimePeriod, 1.0, begin, length, hlc3StdOutArray);
+
+        if (hlc3StdRetCode == RetCode.Success) {
+            hlc3StdOutArrayList = removeZeroInArray(hlc3StdOutArray);
+            for(Double hlc3StdOut : hlc3StdOutArrayList){
+                BigDecimal hlc3StdOutBD = BigDecimal.valueOf(hlc3StdOut);
+                BigDecimal devBD = hlc3StdOutBD.multiply(BigDecimal.valueOf(mult));
+                devArrayList.add(devBD.doubleValue());
+            }
+            Log.d(TAG, "hlc3StdOutArrayList.size: " + hlc3StdOutArrayList.size());
+        }
+
+        int basisIndex = 0;
+        for (Double dev : devArrayList) {
+            double basis = vwmaArrayList.get(basisIndex);
+            BigDecimal basisBD = BigDecimal.valueOf(basis);
+            BigDecimal devBD = BigDecimal.valueOf(dev);
+
+            double upper1 = BigDecimal.valueOf(0.236).multiply(devBD).add(basisBD).doubleValue();
+            double upper2 = BigDecimal.valueOf(0.382).multiply(devBD).add(basisBD).doubleValue();
+            double upper3 = BigDecimal.valueOf(0.5).multiply(devBD).add(basisBD).doubleValue();
+            double upper4 = BigDecimal.valueOf(0.618).multiply(devBD).add(basisBD).doubleValue();
+            double upper5 = BigDecimal.valueOf(0.764).multiply(devBD).add(basisBD).doubleValue();
+            double upper6 = BigDecimal.valueOf(1.0).multiply(devBD).add(basisBD).doubleValue();
+            double lower1 = basisBD.subtract(BigDecimal.valueOf(0.236).multiply(devBD)).doubleValue();
+            double lower2 = basisBD.subtract(BigDecimal.valueOf(0.382).multiply(devBD)).doubleValue();
+            double lower3 = basisBD.subtract(BigDecimal.valueOf(0.5).multiply(devBD)).doubleValue();
+            double lower4 = basisBD.subtract(BigDecimal.valueOf(0.618).multiply(devBD)).doubleValue();
+            double lower5 = basisBD.subtract(BigDecimal.valueOf(0.764).multiply(devBD)).doubleValue();
+            double lower6 = basisBD.subtract(BigDecimal.valueOf(1.0).multiply(devBD)).doubleValue();
+            lower5ArrayList.add(lower5);
+            lower6ArrayList.add(lower6);
+//            Log.d(TAG, " ");
+//            Log.d(TAG, "upper1: " + upper1);
+//            Log.d(TAG, "upper2: " + upper2);
+//            Log.d(TAG, "upper3: " + upper3);
+//            Log.d(TAG, "upper4: " + upper4);
+//            Log.d(TAG, "upper5: " + upper5);
+//            Log.d(TAG, "upper6: " + upper6);
+//            Log.d(TAG, "lower1: " + lower1);
+//            Log.d(TAG, "lower2: " + lower2);
+//            Log.d(TAG, "lower3: " + lower3);
+//            Log.d(TAG, "lower4: " + lower4);
+//            Log.d(TAG, "lower5: " + lower5);
+//            Log.d(TAG, "lower6: " + lower6);
+            basisIndex += 1;
+        }
+        Log.d(TAG, "symbol: " + symbol);
+        Log.d(TAG, "lower5: " + lower5ArrayList.get(lower5ArrayList.size() - 1));
+        Log.d(TAG, "closePrice: " + closePrice[closePrice.length - 1]);
+        if (closePrice[closePrice.length - 1] < lower6ArrayList.get(lower6ArrayList.size() - 1)){
+            Log.d(TAG, "Symbol Lower than Fib 6: " + symbol);
+        }
+
+        if (closePrice[closePrice.length - 1] < lower5ArrayList.get(lower5ArrayList.size() - 1)){
+            Log.d(TAG, "Symbol Lower than Fib 5: " + symbol);
+        }
+
+        smaListener.onSuccess();
+    }
+
+    public RetCode stdDev(int startIdx, int endIdx, double[] inReal, int optInTimePeriod, double optInNbDev, MInteger outBegIdx, MInteger outNBElement, double[] outReal) {
+        if (startIdx < 0) {
+            return RetCode.OutOfRangeStartIndex;
+        } else if (endIdx >= 0 && endIdx >= startIdx) {
+            if (optInTimePeriod == -2147483648) {
+                optInTimePeriod = 5;
+            } else if (optInTimePeriod < 2 || optInTimePeriod > 100000) {
+                return RetCode.BadParam;
+            }
+
+            if (optInNbDev == -4.0E37D) {
+                optInNbDev = 1.0D;
+            } else if (optInNbDev < -3.0E37D || optInNbDev > 3.0E37D) {
+                return RetCode.BadParam;
+            }
+
+            Core core = new Core();
+            RetCode retCode = core.TA_INT_VAR(startIdx, endIdx, inReal, optInTimePeriod, outBegIdx, outNBElement, outReal);
+            if (retCode != RetCode.Success) {
+                return retCode;
+            } else {
+                int i;
+                double tempReal;
+                if (optInNbDev != 1.0D) {
+                    for(i = 0; i < outNBElement.value; ++i) {
+                        tempReal = outReal[i];
+                        if (tempReal >= 1.0E-30D) {
+                            outReal[i] = Math.sqrt(tempReal) * optInNbDev;
+                        } else {
+                            outReal[i] = 0.0D;
+                        }
+                    }
+                } else {
+                    for(i = 0; i < outNBElement.value; ++i) {
+                        tempReal = outReal[i];
+                        if (tempReal >= 1.0E-30D) {
+                            outReal[i] = Math.sqrt(tempReal);
+                        } else {
+                            outReal[i] = 0.0D;
+                        }
+                    }
+                }
+
+                return RetCode.Success;
+            }
+        } else {
+            return RetCode.OutOfRangeEndIndex;
         }
     }
 
