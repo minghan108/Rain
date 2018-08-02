@@ -19,6 +19,7 @@ import static rain.com.rain.MainActivity.initialDiState;
 import static rain.com.rain.MainActivity.isFirstLaunch;
 import static rain.com.rain.MainActivity.isFirstScanComplete;
 import static rain.com.rain.MainActivity.isMinusDiGreater;
+import static rain.com.rain.MainActivity.pumpHashMap;
 import static rain.com.rain.MainActivity.sellRemainderState;
 import static rain.com.rain.MainActivity.symbolBreakoutMap;
 
@@ -26,6 +27,36 @@ public class AdxDmModel {
     private String TAG = "AdxDmModel ";
     private boolean isFirstLaunch = true;
 
+
+    public void calculatePumpPercent(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
+        Core core = new Core();
+        double minPrice = 0.0;
+        int minPriceIndex = 0;
+        double deltaPercent = 0.0;
+        BigDecimal closePriceBD;
+        BigDecimal minPriceBD;
+
+        for (int j = 0; j < 3; j++){
+            if (closePrice[j] > minPrice){
+                minPrice = closePrice[j];
+                minPriceIndex = j;
+            }
+        }
+
+        if (openPrice[openPrice.length - 1] > minPrice){
+            minPrice = openPrice[openPrice.length - 1];
+            minPriceIndex = openPrice.length - 1;
+        }
+
+        closePriceBD = BigDecimal.valueOf(closePrice[closePrice.length - 1]);
+        minPriceBD = BigDecimal.valueOf(minPrice);
+        deltaPercent = (closePriceBD.subtract(minPriceBD)).divide(minPriceBD, 9, RoundingMode.HALF_DOWN).multiply(BigDecimal.valueOf(100.0)).doubleValue();
+
+        pumpHashMap.put(symbol, deltaPercent);
+
+        smaListener.onSuccess();
+
+    }
 
     public void calculateSupportResistance(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, AdxListener adxListener, String symbol){
         double[] smaOutArray = new double[volume.length];

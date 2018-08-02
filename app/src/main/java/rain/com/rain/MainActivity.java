@@ -1,7 +1,16 @@
 package rain.com.rain;
 
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.os.AsyncTask;
+import android.os.Build;
+import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
@@ -11,9 +20,12 @@ import android.widget.TextView;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
@@ -42,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private double buyOrderTier4 = 0.0;
     private List<Double> buyOrderTierList = new ArrayList<>();
     private List<Double> buyOrderQuantityPercentList = new ArrayList<>();
+    private NotificationManager notifManager;
 
 
     private static enum InitialDiState{
@@ -68,6 +81,7 @@ public class MainActivity extends AppCompatActivity {
     public static List<String> symbolsList = new ArrayList<>();
     public static HashMap<String, Boolean> symbolBreakoutMap = new HashMap<>();
     public static HashMap<String, Balance> balanceHashMap = new HashMap<>();
+    public static HashMap<String, Double> pumpHashMap = new HashMap<>();
     public static boolean isFirstScanComplete = false;
     public static boolean isMinusDiGreater = false;
     public static boolean isFirstLaunch = true;
@@ -79,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
     public static Double startMoney = 100.0;
     public static Double startCoin = 0.0;
     public double maxDiDiff = 0.0;
-    public static int limit  = 500;
+    public static int limit  = 4;
     public static Long serverTime = 0L;
     public static String symbol = "WAVESBTC";
 
@@ -95,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
 //        rateTextView.setMovementMethod(new ScrollingMovementMethod());
 //        reverseRateTextView.setMovementMethod(new ScrollingMovementMethod());
         breakoutTextView.setMovementMethod(new ScrollingMovementMethod());
+        new FindPumpAsyncTask().execute();
     }
 
     public static long localToGMT() {
@@ -109,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume(){
         super.onResume();
-        sendGetSymbolsRequest();
+//        sendGetSymbolsRequest();
 
 //        sendDefKlinesRequest(symbolsArray[symbolsIndex]);
         //sendDefKlinesRequest(symbol);
@@ -413,22 +428,154 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSuccess() {
-                if (symbolsIndex + 1 < (symbolsList.size())) {
+                if ((symIndex + 1) < symbolsList.size()) {
                     symIndex += 1;
+                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
+                } else {
+                    List<Double> pumpHashMapValues = new ArrayList<>(pumpHashMap.values());
+                    Set<String> pumpHashMapKey = pumpHashMap.keySet();
+                    Collections.sort(pumpHashMapValues);
+                    for (Double sortedPrice :pumpHashMapValues){
+                        Log.d(TAG, "sortedPrice: " + sortedPrice);
+                    }
+
+                    breakoutTextViewString = "";
+
+                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
+                        Double value = pumpHashMapValues.get(i);
+
+                        for (String key : pumpHashMapKey){
+                            if (pumpHashMap.get(key).equals(value)){
+                                breakoutTextViewString += key + " " + value + "\n";
+                                if (value > 9.0){
+                                    createNotification("Pump: " + key + " " + value);
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            breakoutTextView.setText(breakoutTextViewString);
+                        }
+                    });
+
+                    pumpHashMap.clear();
+                    symIndex = 0;
                     klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
                 }
             }
 
             @Override
             public void onFailure(String response) {
-                if (symbolsIndex + 1 < (symbolsList.size())) {
+                if ((symIndex + 1) < symbolsList.size()) {
                     symIndex += 1;
+                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
+                } else {
+                    List<Double> pumpHashMapValues = new ArrayList<>(pumpHashMap.values());
+                    Set<String> pumpHashMapKey = pumpHashMap.keySet();
+                    Collections.sort(pumpHashMapValues);
+                    for (Double sortedPrice :pumpHashMapValues){
+                        Log.d(TAG, "sortedPrice: " + sortedPrice);
+                    }
+
+                    breakoutTextViewString = "";
+
+                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
+                        Double value = pumpHashMapValues.get(i);
+
+                        for (String key : pumpHashMapKey){
+                            if (pumpHashMap.get(key).equals(value)){
+                                breakoutTextViewString += key + " " + value + "\n";
+                                if (value > 9.0){
+                                    createNotification("Pump: " + key + " " + value);
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            breakoutTextView.setText(breakoutTextViewString);
+                        }
+                    });
+
+                    pumpHashMap.clear();
+                    symIndex = 0;
                     klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
                 }
             }
         };
 
         klinesManager.sendDefaultKlinesRequest(smaListener, symbol);
+    }
+
+    public void createNotification(String aMessage) {
+        final int NOTIFY_ID = 1002;
+
+        // There are hardcoding only for show it's just strings
+        String name = "my_package_channel";
+        String id = "my_package_channel_1"; // The user-visible name of the channel.
+        String description = "my_package_first_channel"; // The user-visible description of the channel.
+
+        Intent intent;
+        PendingIntent pendingIntent;
+        Notification.Builder builder;
+
+        if (notifManager == null) {
+            notifManager =
+                    (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            int importance = NotificationManager.IMPORTANCE_HIGH;
+            NotificationChannel mChannel = notifManager.getNotificationChannel(id);
+            if (mChannel == null) {
+                mChannel = new NotificationChannel(id, name, importance);
+                mChannel.setDescription(description);
+                mChannel.enableVibration(true);
+                mChannel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
+                notifManager.createNotificationChannel(mChannel);
+            }
+            builder = new Notification.Builder(getApplicationContext(), id);
+
+            intent = new Intent(this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            pendingIntent = PendingIntent.getActivity(this, 0, intent, 0);
+
+            builder.setContentTitle(aMessage)  // required
+                    .setSmallIcon(android.R.drawable.ic_popup_reminder) // required
+                    .setContentText(this.getString(R.string.app_name))  // required
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setContentIntent(pendingIntent)
+                    .setTicker(aMessage)
+                    .setVibrate(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
+        } else {
+
+            builder = new Notification.Builder(this, id);
+
+            intent = new Intent(this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            pendingIntent = PendingIntent.getActivity(this, 0, intent, 0);
+
+            builder.setContentTitle(aMessage)                           // required
+                    .setSmallIcon(android.R.drawable.ic_popup_reminder) // required
+                    .setContentText(this.getString(R.string.app_name))  // required
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setContentIntent(pendingIntent)
+                    .setTicker(aMessage)
+                    .setVibrate(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400})
+                    .setPriority(Notification.PRIORITY_HIGH);
+        } // else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+        Notification notification = builder.build();
+        notifManager.notify(NOTIFY_ID, notification);
     }
 
     private String getCancelBuyOrderQueryString(Long orderId) {
@@ -649,6 +796,21 @@ public class MainActivity extends AppCompatActivity {
         BigDecimal b = new BigDecimal(Double.toString(x));
         b = b.setScale(roundTodecimalPlace, BigDecimal.ROUND_HALF_DOWN);
         return b.doubleValue();
+    }
+
+    private class FindPumpAsyncTask extends AsyncTask<Void, Void, Void> {
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            sendGetSymbolsRequest();
+            return null;
+        }
+
+        @Override
+        protected void onPreExecute() {}
+
+        @Override
+        protected void onProgressUpdate(Void... values) {}
     }
 }
 
