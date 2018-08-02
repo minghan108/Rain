@@ -289,6 +289,44 @@ public class AdxDmModel {
         smaListener.onSuccess();
     }
 
+    public void calculateStochiastic(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
+        double[] outSlowKArray = new double[highPrice.length];
+        double[] outSlowDArray = new double[highPrice.length];
+        ArrayList<Double> outSlowKArrayList = new ArrayList<>();
+        ArrayList<Double> outSlowDArrayList = new ArrayList<>();
+        Core core = new Core();
+        MInteger begin = new MInteger();
+        MInteger length = new MInteger();
+        RetCode stochiasticRetCode = core.stoch(0, highPrice.length - 1, highPrice, lowPrice, closePrice, 14, 3, MAType.Sma, 3,
+                MAType.Sma, begin, length, outSlowKArray, outSlowDArray);
+
+        if (stochiasticRetCode == RetCode.Success) {
+            outSlowKArrayList = removeZeroInArray(outSlowKArray);
+            outSlowDArrayList = removeZeroInArray(outSlowDArray);
+            Log.d(TAG, "SlowK: " + outSlowKArrayList.get(outSlowKArrayList.size() - 2));
+            Log.d(TAG, "SlowD: " + outSlowDArrayList.get(outSlowDArrayList.size() - 2));
+        }
+    }
+
+    public void calculateStochiasticRsi(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
+        double[] outSlowKRsiArray = new double[highPrice.length];
+        double[] outSlowDRsiArray = new double[highPrice.length];
+        double[] outRsiArray = new double[highPrice.length];
+        ArrayList<Double> outSlowKArrayList = new ArrayList<>();
+        ArrayList<Double> outSlowDArrayList = new ArrayList<>();
+        Core core = new Core();
+        MInteger begin = new MInteger();
+        MInteger length = new MInteger();
+        RetCode rsiRetCode = core.rsi(0, highPrice.length - 1, closePrice, 14, begin, length, outRsiArray);
+        RetCode stochiasticRsiRetCode = core.stochRsi(0, highPrice.length - 1, outRsiArray, 14, 3, 3,
+                MAType.Sma, begin, length, outSlowKRsiArray, outSlowDRsiArray);
+    }
+
+    //int startIdx, int endIdx, double[] inReal, int optInTimePeriod, MInteger outBegIdx, MInteger outNBElement, double[] outReal
+
+//    int startIdx, int endIdx, double[] inReal, int optInTimePeriod, int optInFastK_Period, int optInFastD_Period,
+//    MAType optInFastD_MAType, MInteger outBegIdx, MInteger outNBElement, double[] outFastK, double[] outFastD
+
     public RetCode stdDev(int startIdx, int endIdx, double[] inReal, int optInTimePeriod, double optInNbDev, MInteger outBegIdx, MInteger outNBElement, double[] outReal) {
         if (startIdx < 0) {
             return RetCode.OutOfRangeStartIndex;
