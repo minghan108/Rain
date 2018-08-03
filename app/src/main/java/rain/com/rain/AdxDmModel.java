@@ -321,6 +321,21 @@ public class AdxDmModel {
     }
 
     public void calculatePSar(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
+        double[] outPSarArray = new double[highPrice.length];
+        ArrayList<Double> outPSarArrayList = new ArrayList<>();
+        Core core = new Core();
+        MInteger begin = new MInteger();
+        MInteger length = new MInteger();
+
+        RetCode pSarRetCode = core.sar(0, highPrice.length - 1, highPrice, lowPrice, 0.02, 0.2, begin, length, outPSarArray);
+
+        if (pSarRetCode == RetCode.Success){
+            outPSarArrayList = removeZeroInArray(outPSarArray);
+
+            for (Double psar : outPSarArray){
+                Log.d(TAG, "psar: " + psar);
+            }
+        }
 
     }
 

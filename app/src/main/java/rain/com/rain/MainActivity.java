@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
     public double maxDiDiff = 0.0;
     public static int limit  = 500;
     public static Long serverTime = 0L;
-    public static String symbol = "WAVESBTC";
+    public static String symbol = "BTCUSDT";
 
 
     @Override
@@ -802,7 +802,8 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected Void doInBackground(Void... voids) {
-            sendGetSymbolsRequest();
+            sendDefKlinesRequest(symbol);
+            //sendGetSymbolsRequest();
             return null;
         }
 
