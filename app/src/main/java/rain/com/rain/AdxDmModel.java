@@ -320,6 +320,10 @@ public class AdxDmModel {
         smaListener.onSuccess();
     }
 
+    public void calculatePSar(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
+
+    }
+
     public void calculateStochiastic(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
         double[] outSlowKArray = new double[highPrice.length];
         double[] outSlowDArray = new double[highPrice.length];

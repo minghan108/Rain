@@ -93,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
     public static Double startMoney = 100.0;
     public static Double startCoin = 0.0;
     public double maxDiDiff = 0.0;
-    public static int limit  = 4;
+    public static int limit  = 500;
     public static Long serverTime = 0L;
     public static String symbol = "WAVESBTC";
 
@@ -432,39 +432,39 @@ public class MainActivity extends AppCompatActivity {
                     symIndex += 1;
                     klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
                 } else {
-                    List<Double> pumpHashMapValues = new ArrayList<>(pumpHashMap.values());
-                    Set<String> pumpHashMapKey = pumpHashMap.keySet();
-                    Collections.sort(pumpHashMapValues);
-                    for (Double sortedPrice :pumpHashMapValues){
-                        Log.d(TAG, "sortedPrice: " + sortedPrice);
-                    }
-
-                    breakoutTextViewString = "";
-
-                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
-                        Double value = pumpHashMapValues.get(i);
-
-                        for (String key : pumpHashMapKey){
-                            if (pumpHashMap.get(key).equals(value)){
-                                breakoutTextViewString += key + " " + value + "\n";
-                                if (value > 7.0){
-                                    createNotification("Pump: " + key + " " + value);
-                                }
-                                break;
-                            }
-                        }
-                    }
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            breakoutTextView.setText(breakoutTextViewString);
-                        }
-                    });
-
-                    pumpHashMap.clear();
-                    symIndex = 0;
-                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
+//                    List<Double> pumpHashMapValues = new ArrayList<>(pumpHashMap.values());
+//                    Set<String> pumpHashMapKey = pumpHashMap.keySet();
+//                    Collections.sort(pumpHashMapValues);
+//                    for (Double sortedPrice :pumpHashMapValues){
+//                        Log.d(TAG, "sortedPrice: " + sortedPrice);
+//                    }
+//
+//                    breakoutTextViewString = "";
+//
+//                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
+//                        Double value = pumpHashMapValues.get(i);
+//
+//                        for (String key : pumpHashMapKey){
+//                            if (pumpHashMap.get(key).equals(value)){
+//                                breakoutTextViewString += key + " " + value + "\n";
+//                                if (value > 7.0){
+//                                    createNotification("Pump: " + key + " " + value);
+//                                }
+//                                break;
+//                            }
+//                        }
+//                    }
+//
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            breakoutTextView.setText(breakoutTextViewString);
+//                        }
+//                    });
+//
+//                    pumpHashMap.clear();
+//                    symIndex = 0;
+//                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
                 }
             }
 
@@ -474,39 +474,39 @@ public class MainActivity extends AppCompatActivity {
                     symIndex += 1;
                     klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
                 } else {
-                    List<Double> pumpHashMapValues = new ArrayList<>(pumpHashMap.values());
-                    Set<String> pumpHashMapKey = pumpHashMap.keySet();
-                    Collections.sort(pumpHashMapValues);
-                    for (Double sortedPrice :pumpHashMapValues){
-                        Log.d(TAG, "sortedPrice: " + sortedPrice);
-                    }
-
-                    breakoutTextViewString = "";
-
-                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
-                        Double value = pumpHashMapValues.get(i);
-
-                        for (String key : pumpHashMapKey){
-                            if (pumpHashMap.get(key).equals(value)){
-                                breakoutTextViewString += key + " " + value + "\n";
-                                if (value > 9.0){
-                                    createNotification("Pump: " + key + " " + value);
-                                }
-                                break;
-                            }
-                        }
-                    }
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            breakoutTextView.setText(breakoutTextViewString);
-                        }
-                    });
-
-                    pumpHashMap.clear();
-                    symIndex = 0;
-                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
+//                    List<Double> pumpHashMapValues = new ArrayList<>(pumpHashMap.values());
+//                    Set<String> pumpHashMapKey = pumpHashMap.keySet();
+//                    Collections.sort(pumpHashMapValues);
+//                    for (Double sortedPrice :pumpHashMapValues){
+//                        Log.d(TAG, "sortedPrice: " + sortedPrice);
+//                    }
+//
+//                    breakoutTextViewString = "";
+//
+//                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
+//                        Double value = pumpHashMapValues.get(i);
+//
+//                        for (String key : pumpHashMapKey){
+//                            if (pumpHashMap.get(key).equals(value)){
+//                                breakoutTextViewString += key + " " + value + "\n";
+//                                if (value > 9.0){
+//                                    createNotification("Pump: " + key + " " + value);
+//                                }
+//                                break;
+//                            }
+//                        }
+//                    }
+//
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            breakoutTextView.setText(breakoutTextViewString);
+//                        }
+//                    });
+//
+//                    pumpHashMap.clear();
+//                    symIndex = 0;
+//                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
                 }
             }
         };
