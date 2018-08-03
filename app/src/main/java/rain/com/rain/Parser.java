@@ -247,7 +247,7 @@ public class Parser {
 
             try {
                 String symbol = jsonArray.getJSONObject(i).getString("symbol");
-                if (symbol.contains("BTC")){
+                if (symbol.contains("BTC") && !symbol.contains("HOT")){
                     symbolList.add(symbol);
                     symbolBreakoutMap.put(symbol, false);
                 }

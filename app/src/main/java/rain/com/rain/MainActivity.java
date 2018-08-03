@@ -447,7 +447,7 @@ public class MainActivity extends AppCompatActivity {
                         for (String key : pumpHashMapKey){
                             if (pumpHashMap.get(key).equals(value)){
                                 breakoutTextViewString += key + " " + value + "\n";
-                                if (value > 9.0){
+                                if (value > 7.0){
                                     createNotification("Pump: " + key + " " + value);
                                 }
                                 break;

@@ -30,20 +30,20 @@ public class AdxDmModel {
 
     public void calculatePumpPercent(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
         Core core = new Core();
-        double minPrice = 0.0;
+        double minPrice = closePrice[0];
         int minPriceIndex = 0;
         double deltaPercent = 0.0;
         BigDecimal closePriceBD;
         BigDecimal minPriceBD;
 
-        for (int j = 0; j < 3; j++){
-            if (closePrice[j] > minPrice){
+        for (int j = 1; j < 3; j++){
+            if (closePrice[j] < minPrice){
                 minPrice = closePrice[j];
                 minPriceIndex = j;
             }
         }
 
-        if (openPrice[openPrice.length - 1] > minPrice){
+        if (openPrice[openPrice.length - 1] < minPrice){
             minPrice = openPrice[openPrice.length - 1];
             minPriceIndex = openPrice.length - 1;
         }
