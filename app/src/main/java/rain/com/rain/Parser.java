@@ -221,7 +221,10 @@ public class Parser {
         //adxDmModel.calculateSupportResistance(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
         //adxDmModel.calculatePumpPercent(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
         //adxDmModel.calculateSma(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
-        adxDmModel.calculatePSar(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
+        //adxDmModel.calculateRSI(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
+        //adxDmModel.calculateWaveC(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
+        adxDmModel.calculateReversalBand(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
+        //adxDmModel.calculatePSar(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
         //adxDmModel.calculateStochiastic(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
 //        adxDmModel.calculateBol(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
         //adxDmModel.calculateBolOptimization(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);

@@ -26,7 +26,7 @@ import static rain.com.rain.MainActivity.symbolBreakoutMap;
 public class AdxDmModel {
     private String TAG = "AdxDmModel ";
     private boolean isFirstLaunch = true;
-
+    private ArrayList<String> targetSymbolList = new ArrayList<>();
 
     public void calculatePumpPercent(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
         Core core = new Core();
@@ -328,14 +328,438 @@ public class AdxDmModel {
         MInteger length = new MInteger();
 
         RetCode pSarRetCode = core.sar(0, highPrice.length - 1, highPrice, lowPrice, 0.02, 0.2, begin, length, outPSarArray);
+//        RetCode pSarRetCode = core.sarExt(0, highPrice.length - 1, highPrice, lowPrice, 0.02, 0.02, 0.02, 0.02,
+//                0.2, 0.02, 0.02, 0.2, begin, length, outPSarArray);
+
+//        int startIdx, int endIdx, double[] inHigh, double[] inLow, double optInAcceleration, double optInMaximum, MInteger outBegIdx, MInteger outNBElement, double[] outReal
+
+//        int startIdx, int endIdx, float[] inHigh, float[] inLow, double optInStartValue, double optInOffsetOnReverse, double optInAccelerationInitLong, double optInAccelerationLong,
+//        double optInAccelerationMaxLong, double optInAccelerationInitShort, double optInAccelerationShort, double optInAccelerationMaxShort, MInteger outBegIdx, MInteger outNBElement, double[] outReal
+
 
         if (pSarRetCode == RetCode.Success){
+//            Log.d(TAG, "lowPrice: " + lowPrice[lowPrice.length -1]);
+//            Log.d(TAG, "highPrice: " + highPrice[highPrice.length -1]);
             outPSarArrayList = removeZeroInArray(outPSarArray);
 
             for (Double psar : outPSarArray){
                 Log.d(TAG, "psar: " + psar);
             }
         }
+
+    }
+
+    private double[] convertArrayListToArray(ArrayList<Double> arrayList, int arraySize){
+//        double[] returnArray = new double[arrayList.size() - (fromIndex)];
+//
+//        int index = 0;
+//        for(int i = fromIndex; i < arrayList.size(); i++){
+//            returnArray[index] = arrayList.get(i);
+//            index += 1;
+//        }
+
+        double[] returnArray = new double[arraySize];
+        for (int i = 0; i < (arraySize - arrayList.size()); i++){
+            returnArray[i] = 0.0;
+        }
+
+        int index = arraySize - arrayList.size();
+        for (Double elem : arrayList){
+            returnArray[index] = elem;
+            index += 1;
+        }
+
+        return returnArray;
+    }
+
+    public void calculateRSI(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
+        double[] outRSIArray = new double[closePrice.length];
+        ArrayList<Double> outRSIArrayList = new ArrayList<>();
+
+        Core core = new Core();
+        MInteger begin = new MInteger();
+        MInteger length = new MInteger();
+        RetCode rsiRetCode = core.rsi(0, closePrice.length - 1, closePrice, 14, begin, length, outRSIArray);
+
+        for (double rsi : outRSIArray){
+            outRSIArrayList = removeZeroInArray(outRSIArray);
+        }
+
+        if (outRSIArrayList.get(outRSIArrayList.size() - 1) < 35){
+            Log.d(TAG, "Rsi < 40: " + symbol + " " + (outRSIArrayList.get(outRSIArrayList.size() - 1)));
+            targetSymbolList.add(symbol);
+        }
+
+
+    }
+
+    public void calculateWaveC(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
+        if (targetSymbolList.contains(symbol)) {
+            double[] outFastMA5Array = new double[closePrice.length];
+            double[] outSlowMA5Array = new double[closePrice.length];
+            double[] outSlowMA6Array = new double[closePrice.length];
+            double[] outFastMA6Array;
+            double[] signal5Array = new double[closePrice.length];
+            ArrayList<Double> fastMA5ArrayList = new ArrayList<>();
+            ArrayList<Double> slowMA5ArrayList = new ArrayList<>();
+            ArrayList<Double> signal5ArrayList = new ArrayList<>();
+            ArrayList<Double> slowMA6ArrayList = new ArrayList<>();
+            Core core = new Core();
+            MInteger begin = new MInteger();
+            MInteger length = new MInteger();
+
+            RetCode fastMA5RetCode = core.ema(0, closePrice.length - 1, closePrice, 8, begin, length, outFastMA5Array);
+            RetCode slowMA5RetCode = core.ema(0, closePrice.length - 1, closePrice, 233, begin, length, outSlowMA5Array);
+
+//        for (double fastMA5 : outFastMA5Array){
+//            Log.d(TAG, "fastMA5: " + fastMA5);
+//        }
+
+//        for (double slowMA5 : outSlowMA5Array){
+//            Log.d(TAG, "slowMA5: " + slowMA5);
+//        }
+//
+            fastMA5ArrayList = removeZeroInArray(outFastMA5Array);
+            slowMA5ArrayList = removeZeroInArray(outSlowMA5Array);
+
+
+            double[] fastMA5Copy = convertArrayListToArray(fastMA5ArrayList, 1000);
+            Log.d(TAG, "fastMA5Copy: " + fastMA5Copy[fastMA5Copy.length - 2]);
+            double[] slowMA5Copy = convertArrayListToArray(slowMA5ArrayList, 1000);
+            double[] macd5Array = new double[fastMA5Copy.length];
+
+//        for (double slowMA5 : slowMA5Copy){
+//            Log.d(TAG, "slowMA5: " + slowMA5);
+//        }
+
+
+            if (fastMA5RetCode == RetCode.Success && slowMA5RetCode == RetCode.Success) {
+                int waveIndex = 0;
+                for (double fastMA5 : fastMA5Copy) {
+                    BigDecimal fastMA5BD = BigDecimal.valueOf(fastMA5);
+                    BigDecimal slowMA5BD = BigDecimal.valueOf(slowMA5Copy[waveIndex]);
+                    macd5Array[waveIndex] = fastMA5BD.subtract(slowMA5BD).doubleValue();
+                    waveIndex += 1;
+                }
+            }
+
+            macd5Array = Arrays.copyOfRange(macd5Array, 500, fastMA5Copy.length);
+            Log.d(TAG, "macd5Array: " + macd5Array[macd5Array.length - 1]);
+            Log.d(TAG, "macd5Array.size: " + macd5Array.length);
+
+            RetCode signal5RetCode = core.ema(0, macd5Array.length - 1, macd5Array, 233, begin, length, signal5Array);
+            signal5ArrayList = removeZeroInArray(signal5Array);
+            Log.d(TAG, "signal5ArrayList.size: " + signal5ArrayList.size());
+            double[] signal5ArrayCopy = convertArrayListToArray(signal5ArrayList, 500);
+            signal5ArrayCopy = Arrays.copyOfRange(signal5ArrayCopy, 470, 500);
+            double[] macd5ArrayCopy = Arrays.copyOfRange(macd5Array, 470, 500);
+            double[] hist5Array = new double[macd5ArrayCopy.length];
+
+            int index = 0;
+            for (double signal5 : signal5ArrayCopy) {
+                BigDecimal signal5BD = BigDecimal.valueOf(signal5);
+                BigDecimal macd5BD = BigDecimal.valueOf(macd5ArrayCopy[index]);
+                hist5Array[index] = macd5BD.subtract(signal5BD).doubleValue();
+                //Log.d(TAG, "hist5: " + hist5Array[index]);
+                index += 1;
+            }
+
+            Log.d(TAG, "removeFastMa5: " + (removeZeroInArray(fastMA5Copy).size()));
+            Log.d(TAG, "fastMA5Copy.size: " + fastMA5Copy.length);
+            Log.d(TAG, "slowMA5Copy.size: " + slowMA5Copy.length);
+            Log.d(TAG, "macd5Array.size: " + macd5Array.length);
+
+
+//        RetCode fastMA5RetCode = core.ema(0, closePrice.length - 1, closePrice, 8, begin, length, outFastMA5Array);
+//        RetCode slowMA5RetCode = core.ema(0, closePrice.length - 1, closePrice, 233, begin, length, outSlowMA5Array);
+//
+////        for (double fastMA5 : outFastMA5Array){
+////            Log.d(TAG, "fastMA5: " + fastMA5);
+////        }
+//
+////        for (double slowMA5 : outSlowMA5Array){
+////            Log.d(TAG, "slowMA5: " + slowMA5);
+////        }
+////
+//        fastMA5ArrayList = removeZeroInArray(outFastMA5Array);
+//        slowMA5ArrayList = removeZeroInArray(outSlowMA5Array);
+
+//        RetCode signal5RetCode = core.ema(0, macd5Array.length - 1, macd5Array, 233, begin, length, signal5Array);
+//        signal5ArrayList = removeZeroInArray(signal5Array);
+//        double[] signal5ArrayCopy = convertArrayListToArray(signal5ArrayList);
+//        double[] hist5Array = new double[signal5ArrayCopy.length];
+//
+//
+//        if (signal5RetCode == RetCode.Success){
+//            int waveIndex = 0;
+//            for (double macd5 : macd5Array){
+//                BigDecimal macd5BD = BigDecimal.valueOf(macd5);
+//                BigDecimal signal5BD = BigDecimal.valueOf(signal5ArrayCopy[waveIndex]);
+//                hist5Array[waveIndex] = macd5BD.subtract(signal5BD).doubleValue();
+//                waveIndex += 1;
+//            }
+//        }
+//
+            outFastMA6Array = fastMA5Copy;
+            RetCode slowMA6RetCode = core.ema(0, closePrice.length - 1, closePrice, 377, begin, length, outSlowMA6Array);
+            slowMA6ArrayList = removeZeroInArray(outSlowMA6Array);
+            double[] slowMA6Copy = convertArrayListToArray(slowMA6ArrayList, 1000);
+            double[] macd6Array = new double[slowMA6Copy.length];
+//
+//        for(double slowMA : slowMA6Copy){
+//            Log.d(TAG, "slowMA: " + slowMA);
+//        }
+
+            if (slowMA6RetCode == RetCode.Success) {
+                int waveIndex = 0;
+                int histIndex = 0;
+                for (double fastMA6 : outFastMA6Array) {
+                    BigDecimal fastMacd6BD = BigDecimal.valueOf(fastMA6);
+                    BigDecimal slowMA6 = BigDecimal.valueOf(slowMA6Copy[waveIndex]);
+                    macd6Array[waveIndex] = fastMacd6BD.subtract(slowMA6).doubleValue();
+//                BigDecimal fastMacd6BD = BigDecimal.valueOf(roundDouble(fastMA6, 2));
+//                BigDecimal slowMA6 = BigDecimal.valueOf(roundDouble(slowMA6Copy[waveIndex], 2));
+//                macd6Array[waveIndex] = fastMacd6BD.subtract(slowMA6).doubleValue();
+//                    Log.d(TAG, "macd6: " + macd6Array[waveIndex]);
+//                    if (waveIndex > 969) {
+//                        Log.d(TAG, "hist5: " + hist5Array[histIndex]);
+//                        histIndex += 1;
+//                    }
+//                    waveIndex += 1;
+                }
+            }
+
+            if (macd6Array[macd6Array.length - 1] > 0.0 || hist5Array[hist5Array.length - 1] > 0.0){
+                Log.d(TAG, "symbol passed wave and rsi: " + symbol);
+            }
+        }
+
+        smaListener.onSuccess();
+
+//        int waveIndex = 0;
+//        for (double hist5 : hist5Array){
+//            Log.d(TAG, "hist5: " + hist5);
+//            Log.d(TAG, "waveIndex: " + waveIndex);
+//            waveIndex += 1;
+//        }
+//        Log.d(TAG, "closePrice.length: " + closePrice.length);
+
+        //int startIdx, int endIdx, double[] inReal, int optInTimePeriod, MInteger outBegIdx, MInteger outNBElement, double[] outReal
+
+        // Wave C
+//        fastMA5 = usewc ? ema(close, 8) : na
+//        slowMA5 = usewc ? ema(close, 233) : na
+//        macd5 = usewc ? fastMA5 - slowMA5 : na
+//        signal5 = usewc ? ema(macd5, 233) : na
+//        hist5 = usewc ? macd5 - signal5 : na
+//
+//        fastMA6 = usewc ? ema(close, 8) : na
+//        slowMA6 = usewc ? ema(close, 377) : na
+//        macd6 = usewc ? fastMA6 - slowMA6 : na
+    }
+
+    public void calculateReversalBand(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol) {
+        double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 1000);
+        Log.d(TAG, "closePriceCopy.length: " + closePriceCopy.length);
+        double maxPercentGain = 0.0;
+
+//        for (double mIdx = 2.0; mIdx < 3.1; mIdx += 0.1) {
+        double netPercentGain = 0.0;
+
+//        for (int index = 30; index < 999; index++) {
+            double lower = 0.0;
+
+            while (closePriceCopy[closePriceCopy.length - 1] > lower) {
+                int timePeriod = 25;
+                int atrRange = 25;
+                double mult = 2.5;
+//                    int timePeriod = period;
+//                    int atrRange = period;
+//                    double mult = mIdx;
+                double[] outTREmaArray = new double[closePriceCopy.length];
+                double[] outMaArray = new double[closePriceCopy.length];
+                double[] outTrueRangeArray = new double[closePriceCopy.length];
+                ArrayList<Double> outTREmaArrayList = new ArrayList<>();
+                ArrayList<Double> outMaArrayList = new ArrayList<>();
+                ArrayList<Double> outTrueRangeArrayList = new ArrayList<>();
+                Core core = new Core();
+                MInteger begin = new MInteger();
+                MInteger length = new MInteger();
+
+                RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, highPrice, lowPrice, closePriceCopy, begin, length, outTrueRangeArray);
+                outTrueRangeArrayList = removeZeroInArray(outTrueRangeArray);
+                //Log.d(TAG, "outTrueRangeArrayList.size: " + outTrueRangeArrayList.size());
+                double[] trueRangeArray = convertArrayListToArray(outTrueRangeArrayList, 1000);
+
+                RetCode maRetcode = core.ema(0, closePriceCopy.length - 1, closePriceCopy, timePeriod, begin, length, outMaArray);
+                outMaArrayList = removeZeroInArray(outMaArray);
+                //Log.d(TAG, "outMaArrayList.size: " + outMaArrayList.size());
+                double[] maArray = convertArrayListToArray(outMaArrayList, 1000);
+
+                RetCode rangeMaRetCode = core.ema(0, trueRangeArray.length - 1, trueRangeArray, atrRange, begin, length, outTREmaArray);
+                outTREmaArrayList = removeZeroInArray(outTREmaArray);
+                //Log.d(TAG, "outTREmaArrayList.size: " + outTREmaArrayList.size());
+                double[] trEmaArray = convertArrayListToArray(outTREmaArrayList, 1000);
+
+//        double upper = maArray[maArray.length - 2] + trEmaArray[trEmaArray.length - 2] * mult;
+//        double lower = maArray[maArray.length - 2] - trEmaArray[trEmaArray.length - 2] * mult;
+                // double upper = maArray[maArray.length - 1] + trEmaArray[trEmaArray.length - 1] * mult;
+                lower = maArray[maArray.length - 1] - trEmaArray[trEmaArray.length - 1] * mult;
+                //Log.d(TAG, "upper: " + upper);
+//                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+//                Log.d(TAG, "closePrice: " + closePrice[index]);
+//                Log.d(TAG, "lower: " + lower);
+                closePriceCopy[closePriceCopy.length - 1] -= 0.01;
+            }
+            closePriceCopy[closePriceCopy.length - 1] += 0.01;
+
+            BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[closePriceCopy.length - 1]);
+
+            double buyLevel_01 = BigDecimal.valueOf(0.998).multiply(closePriceCopyBD).doubleValue();
+            double buyLevel_02 = BigDecimal.valueOf(0.9975).multiply(closePriceCopyBD).doubleValue();
+            double buyLevel_03 = BigDecimal.valueOf(0.9970).multiply(closePriceCopyBD).doubleValue();
+            double buyLevel_04 = BigDecimal.valueOf(0.9965).multiply(closePriceCopyBD).doubleValue();
+            double buyLevel_05 = BigDecimal.valueOf(0.9960).multiply(closePriceCopyBD).doubleValue();
+            Log.d(TAG, "closePriceCopy: " + closePriceCopy[closePriceCopy.length - 1]);
+            Log.d(TAG, "buyLevel_01: " + buyLevel_01);
+            Log.d(TAG, "buyLevel_02: " + buyLevel_02);
+            Log.d(TAG, "buyLevel_03: " + buyLevel_03);
+            Log.d(TAG, "buyLevel_04: " + buyLevel_04);
+            Log.d(TAG, "buyLevel_05: " + buyLevel_05);
+
+
+//        if (lowPrice[index] < closePriceCopy[index]) {
+//                Log.d(TAG, "lowPrice: " + lowPrice[index]);
+//                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+//                Log.d(TAG, "next highPrice: " + highPrice[index + 1]);
+//
+//                BigDecimal highPriceBD = BigDecimal.valueOf(highPrice[index + 1]);
+//                BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[index]);
+//                double percentGain = (highPriceBD.subtract(closePriceCopyBD)).divide(closePriceCopyBD, 8, RoundingMode.HALF_DOWN).doubleValue();
+//
+//                Log.d(TAG, "percentGain: " + percentGain);
+//                netPercentGain += percentGain;
+//            }
+//            Log.d(TAG, "index: " + index);
+//            closePriceCopy[index] = closePrice[index];
+//        }
+//
+//        //Log.d(TAG, "period: " + period);
+////            Log.d(TAG, "mult: " + mIdx);
+//        Log.d(TAG, "netPercentGain: " + netPercentGain);
+//        if (maxPercentGain < netPercentGain) {
+//            maxPercentGain = netPercentGain;
+//        }
+////        }
+//
+//        Log.d(TAG, "maxPercentGain: " + maxPercentGain);
+    }
+
+    public void calculateReversalBandOptimization(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
+        double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 1000);
+        Log.d(TAG, "closePriceCopy.length: " + closePriceCopy.length);
+        double maxPercentGain = 0.0;
+
+//        for (double mIdx = 2.0; mIdx < 3.1; mIdx += 0.1) {
+            double netPercentGain = 0.0;
+
+            for (int index = 30; index < 999; index++) {
+                double lower = 0.0;
+
+                while (closePriceCopy[index] > lower) {
+                    int timePeriod = 25;
+                    int atrRange = 25;
+                    double mult = 2.5;
+//                    int timePeriod = period;
+//                    int atrRange = period;
+//                    double mult = mIdx;
+                    double[] outTREmaArray = new double[closePriceCopy.length];
+                    double[] outMaArray = new double[closePriceCopy.length];
+                    double[] outTrueRangeArray = new double[closePriceCopy.length];
+                    ArrayList<Double> outTREmaArrayList = new ArrayList<>();
+                    ArrayList<Double> outMaArrayList = new ArrayList<>();
+                    ArrayList<Double> outTrueRangeArrayList = new ArrayList<>();
+                    Core core = new Core();
+                    MInteger begin = new MInteger();
+                    MInteger length = new MInteger();
+
+                    RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, highPrice, lowPrice, closePriceCopy, begin, length, outTrueRangeArray);
+                    outTrueRangeArrayList = removeZeroInArray(outTrueRangeArray);
+                    //Log.d(TAG, "outTrueRangeArrayList.size: " + outTrueRangeArrayList.size());
+                    double[] trueRangeArray = convertArrayListToArray(outTrueRangeArrayList, 1000);
+
+                    RetCode maRetcode = core.ema(0, closePriceCopy.length - 1, closePriceCopy, timePeriod, begin, length, outMaArray);
+                    outMaArrayList = removeZeroInArray(outMaArray);
+                    //Log.d(TAG, "outMaArrayList.size: " + outMaArrayList.size());
+                    double[] maArray = convertArrayListToArray(outMaArrayList, 1000);
+
+                    RetCode rangeMaRetCode = core.ema(0, trueRangeArray.length - 1, trueRangeArray, atrRange, begin, length, outTREmaArray);
+                    outTREmaArrayList = removeZeroInArray(outTREmaArray);
+                    //Log.d(TAG, "outTREmaArrayList.size: " + outTREmaArrayList.size());
+                    double[] trEmaArray = convertArrayListToArray(outTREmaArrayList, 1000);
+
+//        double upper = maArray[maArray.length - 2] + trEmaArray[trEmaArray.length - 2] * mult;
+//        double lower = maArray[maArray.length - 2] - trEmaArray[trEmaArray.length - 2] * mult;
+                    // double upper = maArray[maArray.length - 1] + trEmaArray[trEmaArray.length - 1] * mult;
+                    lower = maArray[index] - trEmaArray[index] * mult;
+                    //Log.d(TAG, "upper: " + upper);
+//                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+//                Log.d(TAG, "closePrice: " + closePrice[index]);
+//                Log.d(TAG, "lower: " + lower);
+                    closePriceCopy[index] -= 0.1;
+                }
+                closePriceCopy[index] += 0.1;
+
+                if (lowPrice[index] < closePriceCopy[index]) {
+                    Log.d(TAG, "lowPrice: " + lowPrice[index]);
+                    Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+                    Log.d(TAG, "next highPrice: " + highPrice[index + 1]);
+
+                    BigDecimal highPriceBD = BigDecimal.valueOf(highPrice[index + 1]);
+                    BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[index]);
+                    double percentGain = (highPriceBD.subtract(closePriceCopyBD)).divide(closePriceCopyBD, 8, RoundingMode.HALF_DOWN).doubleValue();
+
+                    Log.d(TAG, "percentGain: " + percentGain);
+                    netPercentGain += percentGain;
+                }
+                Log.d(TAG, "index: " + index);
+                closePriceCopy[index] = closePrice[index];
+            }
+
+            //Log.d(TAG, "period: " + period);
+//            Log.d(TAG, "mult: " + mIdx);
+            Log.d(TAG, "netPercentGain: " + netPercentGain);
+            if (maxPercentGain < netPercentGain){
+                maxPercentGain = netPercentGain;
+            }
+//        }
+
+        Log.d(TAG, "maxPercentGain: " + maxPercentGain);
+
+//        for (double tr : outTrueRangeArray){
+//            Log.d(TAG, "tr: " + tr);
+//        }
+//        RetCode rangeMaRetCode = core.ema(0, )
+
+
+        // TTM - Revertion to the Mean Band - INPUTS
+//        z = input(0, title = "Offset")
+//        usesl = input(true, title = "RTM against Slope (UCSgears Addition)", type=bool)
+//        length = a == 1 ? 13 : 25
+//        atrlen = a == 1 ? 13 : 25
+//        mult = a == 1 ? 1.5 : 2.5
+//        range =  tr
+//
+//// Calculations
+//        ma = ema(close, length)
+//        rangema = ema(range, atrlen)
+//        upper = ma + rangema * mult
+//        lower = ma - rangema * mult
+//
+//// All Plots
+//        plot(upper, color=purple, title="Upper Channel", offset = z)
+//        plot(ma, color=red, title="Middle Line", offset = z)
+//        plot(lower, color=purple, title="Lower Channel", offset = z)
 
     }
 
@@ -889,7 +1313,7 @@ public class AdxDmModel {
     public static double roundDouble(double x, int roundTodecimalPlace)
     {
         BigDecimal b = new BigDecimal(Double.toString(x));
-        b = b.setScale(roundTodecimalPlace, BigDecimal.ROUND_HALF_DOWN);
+        b = b.setScale(roundTodecimalPlace, BigDecimal.ROUND_HALF_UP);
         return b.doubleValue();
     }
 }

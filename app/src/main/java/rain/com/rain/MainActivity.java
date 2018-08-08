@@ -10,6 +10,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -93,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
     public static Double startMoney = 100.0;
     public static Double startCoin = 0.0;
     public double maxDiDiff = 0.0;
-    public static int limit  = 500;
+    public static int limit  = 1000;
     public static Long serverTime = 0L;
     public static String symbol = "BTCUSDT";
 
@@ -514,6 +515,7 @@ public class MainActivity extends AppCompatActivity {
         klinesManager.sendDefaultKlinesRequest(smaListener, symbol);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     public void createNotification(String aMessage) {
         final int NOTIFY_ID = 1002;
 
