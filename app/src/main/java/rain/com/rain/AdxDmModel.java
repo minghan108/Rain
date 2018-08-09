@@ -657,6 +657,7 @@ public class AdxDmModel {
 
     public void calculateReversalBandOptimization(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
         double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 1000);
+        double[] lowPriceCopy = Arrays.copyOfRange(lowPrice, 0, 1000);
         Log.d(TAG, "closePriceCopy.length: " + closePriceCopy.length);
         double maxPercentGain = 0.0;
 
@@ -707,6 +708,9 @@ public class AdxDmModel {
 //                Log.d(TAG, "closePrice: " + closePrice[index]);
 //                Log.d(TAG, "lower: " + lower);
                     closePriceCopy[index] -= 0.1;
+                    if (lowPriceCopy[lowPriceCopy.length - 1] > closePriceCopy[closePriceCopy.length - 1]){
+                        lowPriceCopy[lowPriceCopy.length - 1] = closePriceCopy[closePriceCopy.length - 1];
+                    }
                 }
                 closePriceCopy[index] += 0.1;
 
@@ -724,6 +728,7 @@ public class AdxDmModel {
                 }
                 Log.d(TAG, "index: " + index);
                 closePriceCopy[index] = closePrice[index];
+                lowPriceCopy[index] = lowPrice[index];
             }
 
             //Log.d(TAG, "period: " + period);
