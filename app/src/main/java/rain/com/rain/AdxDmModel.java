@@ -565,6 +565,13 @@ public class AdxDmModel {
         Log.d(TAG, "closePriceCopy.length: " + closePriceCopy.length);
         double decrement = 1.0;
         double maxPercentGain = 0.0;
+        int maxDecrement = 0;
+        String text = Double.toString(Math.abs(closePrice[closePrice.length - 1]));
+        int integerPlaces = text.indexOf('.');
+        maxDecrement = text.length() - integerPlaces;
+        Log.d(TAG, "maxDecrement: " + maxDecrement);
+        Log.d(TAG, "closePrice: " + closePrice[closePrice.length - 1]);
+
 
 //        for (double mIdx = 2.0; mIdx < 3.1; mIdx += 0.1) {
         double netPercentGain = 0.0;
@@ -572,8 +579,8 @@ public class AdxDmModel {
 //        for (int index = 30; index < 999; index++) {
             double lower = 0.0;
 
-            for (int decreIndex = 0; decreIndex < symbolBuyPriceDecHashMap.get(symbol); decreIndex++) {
-                decrement = BigDecimal.valueOf(decrement).divide(BigDecimal.valueOf(10.0), 2, RoundingMode.HALF_UP).doubleValue();
+            for (int decreIndex = 0; decreIndex < maxDecrement; decreIndex++) {
+                decrement = BigDecimal.valueOf(decrement).divide(BigDecimal.valueOf(10.0), 10, RoundingMode.HALF_UP).doubleValue();
                 Log.d(TAG, "decrement: " + decrement);
 
                 while (closePriceCopy[closePriceCopy.length - 1] > lower) {
@@ -626,16 +633,20 @@ public class AdxDmModel {
                         lowPriceCopy[lowPriceCopy.length - 1] = closePriceCopy[closePriceCopy.length - 1];
                     }
                 }
+
+                if (lowPriceCopy[lowPriceCopy.length - 1] == closePriceCopy[closePriceCopy.length - 1]) {
+                    lowPriceCopy[lowPriceCopy.length - 1] += decrement;
+                }
                 closePriceCopy[closePriceCopy.length - 1] += decrement;
             }
 
             BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[closePriceCopy.length - 1]);
-            double sellPrice = roundDouble(closePriceCopy[closePriceCopy.length - 1], symbolBuyPriceDecHashMap.get(symbol));
-            double buyLevel_01 = roundDouble(BigDecimal.valueOf(0.998).multiply(closePriceCopyBD).doubleValue(), symbolBuyPriceDecHashMap.get(symbol));
-            double buyLevel_02 = roundDouble(BigDecimal.valueOf(0.9975).multiply(closePriceCopyBD).doubleValue(), symbolBuyPriceDecHashMap.get(symbol));
-            double buyLevel_03 = roundDouble(BigDecimal.valueOf(0.9970).multiply(closePriceCopyBD).doubleValue(), symbolBuyPriceDecHashMap.get(symbol));
-            double buyLevel_04 = roundDouble(BigDecimal.valueOf(0.9965).multiply(closePriceCopyBD).doubleValue(), symbolBuyPriceDecHashMap.get(symbol));
-            double buyLevel_05 = roundDouble(BigDecimal.valueOf(0.9960).multiply(closePriceCopyBD).doubleValue(), symbolBuyPriceDecHashMap.get(symbol));
+            double sellPrice = roundDouble(closePriceCopy[closePriceCopy.length - 1], maxDecrement);
+            double buyLevel_01 = roundDouble(BigDecimal.valueOf(0.998).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
+            double buyLevel_02 = roundDouble(BigDecimal.valueOf(0.9975).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
+            double buyLevel_03 = roundDouble(BigDecimal.valueOf(0.9970).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
+            double buyLevel_04 = roundDouble(BigDecimal.valueOf(0.9965).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
+            double buyLevel_05 = roundDouble(BigDecimal.valueOf(0.9960).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
 //        double buyLevel_01 = BigDecimal.valueOf(0.998).multiply(closePriceCopyBD).doubleValue();
 //        double buyLevel_02 = BigDecimal.valueOf(0.9975).multiply(closePriceCopyBD).doubleValue();
 //        double buyLevel_03 = BigDecimal.valueOf(0.9970).multiply(closePriceCopyBD).doubleValue();
