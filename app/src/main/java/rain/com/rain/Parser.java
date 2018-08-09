@@ -163,7 +163,7 @@ public class Parser {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    public void parseDefaultKlinesJsonResponse(String response, SmaListener smaListener, String symbol){
+    public void parseDefaultKlinesJsonResponse(String response, PriceCalculationListener priceCalculationListener, String symbol){
         klinesOpenLinkedList.clear();
         klinesCloseLinkedList.clear();
         klinesHighLinkedList.clear();
@@ -188,12 +188,12 @@ public class Parser {
             e.printStackTrace();
         }
 
-        calculateSma(symbol, smaListener);
+        calculateSma(symbol, priceCalculationListener);
 
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    private void calculateSma(String symbol, SmaListener smaListener) {
+    private void calculateSma(String symbol, PriceCalculationListener priceCalculationListener) {
         Log.d(TAG, "calculateSma");
         Double[] openPriceArray = klinesOpenLinkedList.toArray(new Double[klinesOpenLinkedList.size()]);
         Double[] highPriceArray = klinesHighLinkedList.toArray(new Double[klinesHighLinkedList.size()]);
@@ -223,7 +223,7 @@ public class Parser {
         //adxDmModel.calculateSma(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
         //adxDmModel.calculateRSI(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
         //adxDmModel.calculateWaveC(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
-        adxDmModel.calculateReversalBand(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
+        adxDmModel.calculateReversalBand(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
         //adxDmModel.calculatePSar(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
         //adxDmModel.calculateStochiastic(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
 //        adxDmModel.calculateBol(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);

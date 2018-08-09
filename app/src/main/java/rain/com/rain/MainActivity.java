@@ -44,7 +44,8 @@ public class MainActivity extends AppCompatActivity {
     private String[] symbolsArray = {"BTCUSDT", "LTCUSDT", "BNBUSDT", "ETHUSDT", "BCCUSDT", "ADAUSDT", "QTUMUSDT", "NEOUSDT"};
     private int symbolsIndex = 0;
     private double buyPrice = 0.0;
-    private String secretKey = "";
+    private double sellPrice = 0.0;
+    private String secretKey = "Eqr4AvEAPufgZ8fD97ciJQjzNp7KMScUBAjqXDoc0IAaMTrUks3lTXGQVbuEEfzi";
     private double buyQuantity = 0.0;
     private double usdtCoin = 0.0;
     private int cancelBuyOrderIdListLength = 0;
@@ -53,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private double buyOrderTier2 = 0.0;
     private double buyOrderTier3 = 0.0;
     private double buyOrderTier4 = 0.0;
+    private double buyOrderTier5 = 0.0;
     private List<Double> buyOrderTierList = new ArrayList<>();
     private List<Double> buyOrderQuantityPercentList = new ArrayList<>();
     private NotificationManager notifManager;
@@ -83,6 +85,8 @@ public class MainActivity extends AppCompatActivity {
     public static HashMap<String, Boolean> symbolBreakoutMap = new HashMap<>();
     public static HashMap<String, Balance> balanceHashMap = new HashMap<>();
     public static HashMap<String, Double> pumpHashMap = new HashMap<>();
+    public static HashMap<String, Integer> symbolQuantDecHashMap = new HashMap<>();
+    public static HashMap<String, Integer> symbolBuyPriceDecHashMap = new HashMap<>();
     public static boolean isFirstScanComplete = false;
     public static boolean isMinusDiGreater = false;
     public static boolean isFirstLaunch = true;
@@ -110,6 +114,10 @@ public class MainActivity extends AppCompatActivity {
 //        rateTextView.setMovementMethod(new ScrollingMovementMethod());
 //        reverseRateTextView.setMovementMethod(new ScrollingMovementMethod());
         breakoutTextView.setMovementMethod(new ScrollingMovementMethod());
+
+        symbolQuantDecHashMap.put("BTCUSDT", 6);
+        symbolBuyPriceDecHashMap.put("BTCUSDT", 2);
+
         new FindPumpAsyncTask().execute();
     }
 
@@ -177,50 +185,7 @@ public class MainActivity extends AppCompatActivity {
 //        klinesManager.sendDefaultKlinesRequest(klinesListener, symbol);
 //    }
 
-    private void sendDefKlinesRequest(String symbol) {
-//        AdxListener adxListener = new AdxListener() {
-//            @Override
-//            public void onSuccess(String displayString) {
-//                breakoutTextViewString += displayString;
-//
-//                runOnUiThread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        breakoutTextView.setText(breakoutTextViewString);
-//                    }
-//                });
-//
-//                symbolsIndex += 1;
-//
-////                if (symbolsIndex >= symbolsList.size()) {
-////                    isFirstScanComplete = true;
-////                    symbolsIndex = 0;
-////                }
-////
-////                sendDefKlinesRequest(symbolsList.get(symbolsIndex));
-//
-//
-//                if (symbolsIndex < symbolsList.size()){
-//                    sendDefKlinesRequest(symbolsList.get(symbolsIndex));
-//                }
-//
-//            }
-//
-//            @Override
-//            public void onFailure(String response) {
-//
-//            }
-//
-//            @Override
-//            public void onBuy() {
-//                handleBuyOrder();
-//            }
-//
-//            @Override
-//            public void onSell() {
-//                handleSellOrder();
-//            }
-//        };
+    private void sendDefKlinesRequest(final String symbol) {
 
         final BuyOrderListener buyOrderListener = new BuyOrderListener() {
             @Override
@@ -245,28 +210,30 @@ public class MainActivity extends AppCompatActivity {
                 int placeOrderIndex = 0;
                 buyOrderQuantityPercentList.clear();
 
-                if ((usdtCoin * 0.1) >= 10.2){
-                    Log.d(TAG, "(usdtCoin * 0.1) >= 10.2");
-                    placeOrderIndex = 4;
+                if ((usdtCoin * 0.1) >= 50) {
+                    Log.d(TAG, "(usdtCoin * 0.1) >= 50");
+                    placeOrderIndex = 5;
                     buyOrderQuantityPercentList.add(0.3);
-                    buyOrderQuantityPercentList.add(0.4);
+                    buyOrderQuantityPercentList.add(0.3);
                     buyOrderQuantityPercentList.add(0.2);
                     buyOrderQuantityPercentList.add(0.1);
-                } else if ((usdtCoin * 0.22) >= 10.2){
-                    Log.d(TAG, "(usdtCoin * 0.22) >= 10.2");
-                    placeOrderIndex = 3;
-                    buyOrderQuantityPercentList.add(0.335);
-                    buyOrderQuantityPercentList.add(0.445);
-                    buyOrderQuantityPercentList.add(0.22);
-                } else if ((usdtCoin * 0.435) >= 10.2){
-                    Log.d(TAG, "(usdtCoin * 0.435) >= 10.2");
-                    placeOrderIndex = 2;
-                    buyOrderQuantityPercentList.add(0.435);
-                    buyOrderQuantityPercentList.add(0.565);
-                } else if ((usdtCoin >= 10.2)){
-                    Log.d(TAG, "usdtCoin >= 10.2");
-                    placeOrderIndex = 1;
-                    buyOrderQuantityPercentList.add(1.0);
+                    buyOrderQuantityPercentList.add(0.099);
+
+//                } else if ((usdtCoin * 0.22) >= 10.2){
+//                    Log.d(TAG, "(usdtCoin * 0.22) >= 10.2");
+//                    placeOrderIndex = 3;
+//                    buyOrderQuantityPercentList.add(0.335);
+//                    buyOrderQuantityPercentList.add(0.445);
+//                    buyOrderQuantityPercentList.add(0.22);
+//                } else if ((usdtCoin * 0.435) >= 10.2){
+//                    Log.d(TAG, "(usdtCoin * 0.435) >= 10.2");
+//                    placeOrderIndex = 2;
+//                    buyOrderQuantityPercentList.add(0.435);
+//                    buyOrderQuantityPercentList.add(0.565);
+//                } else if ((usdtCoin >= 10.2)){
+//                    Log.d(TAG, "usdtCoin >= 10.2");
+//                    placeOrderIndex = 1;
+//                    buyOrderQuantityPercentList.add(1.0);
                 } else {
                     Log.d(TAG, "Not Enough usdt, Do Nothing");
                     placeOrderIndex = 0;
@@ -276,7 +243,7 @@ public class MainActivity extends AppCompatActivity {
                 for (int j = 0; j < placeOrderIndex; j++) {
                     String signature = "";
                     buyQuantity = 0.0;
-                    buyQuantity = roundDouble(((BigDecimal.valueOf(usdtCoin).multiply(BigDecimal.valueOf(buyOrderQuantityPercentList.get(j)))).divide(BigDecimal.valueOf(buyOrderTierList.get(j)), 2, RoundingMode.HALF_DOWN)).doubleValue(), 1);
+                    buyQuantity = ((BigDecimal.valueOf(usdtCoin).multiply(BigDecimal.valueOf(buyOrderQuantityPercentList.get(j)))).divide(BigDecimal.valueOf(buyOrderTierList.get(j)), symbolQuantDecHashMap.get(symbol), RoundingMode.HALF_DOWN)).doubleValue();
                     Log.d(TAG, "buyQuantity: " + buyQuantity);
                     String buyQueryString = getBuyQueryString(buyOrderTierList.get(j), buyQuantity);
                     String queryStrSignature = "";
@@ -401,20 +368,23 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        BollingerListener bollingerListener = new BollingerListener() {
+        PriceCalculationListener priceCalculationListener = new PriceCalculationListener() {
             @Override
-            public void onSuccess(double bollingerPrice, double buyPriceTier1, double buyPriceTier2, double buyPriceTier3, double buyPriceTier4) {
+            public void onSuccess(double sellingPrice, double buyPriceTier1, double buyPriceTier2, double buyPriceTier3, double buyPriceTier4, double buyPriceTier5) {
                 buyOrderTierList.clear();
-                buyPrice = bollingerPrice;
+                buyPrice = buyPriceTier1;
+                sellPrice = sellingPrice;
                 Log.d(TAG, "buyPrice: " + buyPrice);
                 buyOrderTier1 = buyPriceTier1;
                 buyOrderTier2 = buyPriceTier2;
                 buyOrderTier3 = buyPriceTier3;
                 buyOrderTier4 = buyPriceTier4;
+                buyOrderTier5 = buyPriceTier5;
                 buyOrderTierList.add(buyPriceTier1);
                 buyOrderTierList.add(buyPriceTier2);
                 buyOrderTierList.add(buyPriceTier3);
                 buyOrderTierList.add(buyPriceTier4);
+                buyOrderTierList.add(buyPriceTier5);
                 orderManager.sendServerTimeRequest(serverTimeListener1);
             }
 
@@ -424,95 +394,99 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        SmaListener smaListener = new SmaListener() {
-            int symIndex = 0;
+        klinesManager.sendDefaultKlinesRequest(priceCalculationListener, symbol);
 
-            @Override
-            public void onSuccess() {
-                if ((symIndex + 1) < symbolsList.size()) {
-                    symIndex += 1;
-                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
-                } else {
-//                    List<Double> pumpHashMapValues = new ArrayList<>(pumpHashMap.values());
-//                    Set<String> pumpHashMapKey = pumpHashMap.keySet();
-//                    Collections.sort(pumpHashMapValues);
-//                    for (Double sortedPrice :pumpHashMapValues){
-//                        Log.d(TAG, "sortedPrice: " + sortedPrice);
-//                    }
+
+
+//        SmaListener smaListener = new SmaListener() {
+//            int symIndex = 0;
 //
-//                    breakoutTextViewString = "";
-//
-//                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
-//                        Double value = pumpHashMapValues.get(i);
-//
-//                        for (String key : pumpHashMapKey){
-//                            if (pumpHashMap.get(key).equals(value)){
-//                                breakoutTextViewString += key + " " + value + "\n";
-//                                if (value > 7.0){
-//                                    createNotification("Pump: " + key + " " + value);
-//                                }
-//                                break;
-//                            }
-//                        }
-//                    }
-//
-//                    runOnUiThread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            breakoutTextView.setText(breakoutTextViewString);
-//                        }
-//                    });
-//
-//                    pumpHashMap.clear();
-//                    symIndex = 0;
+//            @Override
+//            public void onSuccess() {
+//                if ((symIndex + 1) < symbolsList.size()) {
+//                    symIndex += 1;
 //                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
-                }
-            }
-
-            @Override
-            public void onFailure(String response) {
-                if ((symIndex + 1) < symbolsList.size()) {
-                    symIndex += 1;
-                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
-                } else {
-//                    List<Double> pumpHashMapValues = new ArrayList<>(pumpHashMap.values());
-//                    Set<String> pumpHashMapKey = pumpHashMap.keySet();
-//                    Collections.sort(pumpHashMapValues);
-//                    for (Double sortedPrice :pumpHashMapValues){
-//                        Log.d(TAG, "sortedPrice: " + sortedPrice);
-//                    }
+//                } else {
+////                    List<Double> pumpHashMapValues = new ArrayList<>(pumpHashMap.values());
+////                    Set<String> pumpHashMapKey = pumpHashMap.keySet();
+////                    Collections.sort(pumpHashMapValues);
+////                    for (Double sortedPrice :pumpHashMapValues){
+////                        Log.d(TAG, "sortedPrice: " + sortedPrice);
+////                    }
+////
+////                    breakoutTextViewString = "";
+////
+////                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
+////                        Double value = pumpHashMapValues.get(i);
+////
+////                        for (String key : pumpHashMapKey){
+////                            if (pumpHashMap.get(key).equals(value)){
+////                                breakoutTextViewString += key + " " + value + "\n";
+////                                if (value > 7.0){
+////                                    createNotification("Pump: " + key + " " + value);
+////                                }
+////                                break;
+////                            }
+////                        }
+////                    }
+////
+////                    runOnUiThread(new Runnable() {
+////                        @Override
+////                        public void run() {
+////                            breakoutTextView.setText(breakoutTextViewString);
+////                        }
+////                    });
+////
+////                    pumpHashMap.clear();
+////                    symIndex = 0;
+////                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
+//                }
+//            }
 //
-//                    breakoutTextViewString = "";
-//
-//                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
-//                        Double value = pumpHashMapValues.get(i);
-//
-//                        for (String key : pumpHashMapKey){
-//                            if (pumpHashMap.get(key).equals(value)){
-//                                breakoutTextViewString += key + " " + value + "\n";
-//                                if (value > 9.0){
-//                                    createNotification("Pump: " + key + " " + value);
-//                                }
-//                                break;
-//                            }
-//                        }
-//                    }
-//
-//                    runOnUiThread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            breakoutTextView.setText(breakoutTextViewString);
-//                        }
-//                    });
-//
-//                    pumpHashMap.clear();
-//                    symIndex = 0;
+//            @Override
+//            public void onFailure(String response) {
+//                if ((symIndex + 1) < symbolsList.size()) {
+//                    symIndex += 1;
 //                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
-                }
-            }
-        };
+//                } else {
+////                    List<Double> pumpHashMapValues = new ArrayList<>(pumpHashMap.values());
+////                    Set<String> pumpHashMapKey = pumpHashMap.keySet();
+////                    Collections.sort(pumpHashMapValues);
+////                    for (Double sortedPrice :pumpHashMapValues){
+////                        Log.d(TAG, "sortedPrice: " + sortedPrice);
+////                    }
+////
+////                    breakoutTextViewString = "";
+////
+////                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
+////                        Double value = pumpHashMapValues.get(i);
+////
+////                        for (String key : pumpHashMapKey){
+////                            if (pumpHashMap.get(key).equals(value)){
+////                                breakoutTextViewString += key + " " + value + "\n";
+////                                if (value > 9.0){
+////                                    createNotification("Pump: " + key + " " + value);
+////                                }
+////                                break;
+////                            }
+////                        }
+////                    }
+////
+////                    runOnUiThread(new Runnable() {
+////                        @Override
+////                        public void run() {
+////                            breakoutTextView.setText(breakoutTextViewString);
+////                        }
+////                    });
+////
+////                    pumpHashMap.clear();
+////                    symIndex = 0;
+////                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
+//                }
+//            }
+//        };
 
-        klinesManager.sendDefaultKlinesRequest(smaListener, symbol);
+//        klinesManager.sendDefaultKlinesRequest(smaListener, symbol);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)

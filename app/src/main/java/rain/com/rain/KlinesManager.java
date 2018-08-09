@@ -115,30 +115,30 @@ public class KlinesManager {
         klinesListener.onFailure(response);
     }
 
-    public void handleOnFailure(String response, SmaListener smaListener) {
+    public void handleOnFailure(String response, PriceCalculationListener priceCalculationListener) {
         Log.d(TAG, "handleOnFailure" + response);
-        smaListener.onFailure(response);
+        priceCalculationListener.onFailure(response);
     }
 
-    public void sendDefaultKlinesRequest(final SmaListener smaListener, final String symbol) {
+    public void sendDefaultKlinesRequest(final PriceCalculationListener priceCalculationListener, final String symbol) {
         SafeThread sendGetAllPlayableContentRequestThread = new SafeThread("sendGetAllPlayableContentRequestThread") {
             @Override
             protected void runSafe() {
-                SmaListener listener = smaListener;
+                PriceCalculationListener listener = priceCalculationListener;
                 final Semaphore sem = new Semaphore();
                 sem.sem_open();
                 OnOkhttpProcessFinish httpListener = new OnOkhttpProcessFinish() {
                     @Override
                     public void onHttpEvent(String response) {
                         Log.d(TAG, "sendGetAllPlayableContentRequest onSuccess");
-                        handleGetDefaultKlinesResponseFromServer(response, smaListener, symbol);
+                        handleGetDefaultKlinesResponseFromServer(response, priceCalculationListener, symbol);
                         sem.sem_post();
                     }
 
                     @Override
                     public void onHttpFailure(String response) {
                         Log.d(TAG, "sendGetAllPlayableContentRequest onFailure");
-                        handleOnFailure(response, smaListener);
+                        handleOnFailure(response, priceCalculationListener);
                         sem.sem_post();
                     }
                 };
@@ -151,8 +151,8 @@ public class KlinesManager {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    private void handleGetDefaultKlinesResponseFromServer(String response, SmaListener smaListener, String symbol) {
-        parser.parseDefaultKlinesJsonResponse(response, smaListener, symbol);
+    private void handleGetDefaultKlinesResponseFromServer(String response, PriceCalculationListener priceCalculationListener, String symbol) {
+        parser.parseDefaultKlinesJsonResponse(response, priceCalculationListener, symbol);
     }
 
     private String getGetDefaultKlinesUrl(String symbol) {

@@ -20,7 +20,7 @@ public class OkHttpConnection {
     private OnOkhttpProcessFinish mListener;
     private final static int MAX_CONCURRENCY_HTTP_CONNECTION = 3;
     private static Semaphore httpRequestThreadSemaphore = new Semaphore(MAX_CONCURRENCY_HTTP_CONNECTION);
-    private String apiKey = "";
+    private String apiKey = "FZc5Yvjaq046dssf83NHnciEV7vadftqTH4CsFyxof2LGYfC4kEaItLlZzwixGnh";
 
 
 

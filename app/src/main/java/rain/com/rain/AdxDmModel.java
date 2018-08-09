@@ -22,6 +22,7 @@ import static rain.com.rain.MainActivity.isMinusDiGreater;
 import static rain.com.rain.MainActivity.pumpHashMap;
 import static rain.com.rain.MainActivity.sellRemainderState;
 import static rain.com.rain.MainActivity.symbolBreakoutMap;
+import static rain.com.rain.MainActivity.symbolBuyPriceDecHashMap;
 
 public class AdxDmModel {
     private String TAG = "AdxDmModel ";
@@ -558,8 +559,9 @@ public class AdxDmModel {
 //        macd6 = usewc ? fastMA6 - slowMA6 : na
     }
 
-    public void calculateReversalBand(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol) {
+    public void calculateReversalBand(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol) {
         double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 1000);
+        double[] lowPriceCopy = Arrays.copyOfRange(lowPrice, 0, 1000);
         Log.d(TAG, "closePriceCopy.length: " + closePriceCopy.length);
         double maxPercentGain = 0.0;
 
@@ -586,7 +588,7 @@ public class AdxDmModel {
                 MInteger begin = new MInteger();
                 MInteger length = new MInteger();
 
-                RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, highPrice, lowPrice, closePriceCopy, begin, length, outTrueRangeArray);
+                RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, highPrice, lowPriceCopy, closePriceCopy, begin, length, outTrueRangeArray);
                 outTrueRangeArrayList = removeZeroInArray(outTrueRangeArray);
                 //Log.d(TAG, "outTrueRangeArrayList.size: " + outTrueRangeArrayList.size());
                 double[] trueRangeArray = convertArrayListToArray(outTrueRangeArrayList, 1000);
@@ -601,6 +603,10 @@ public class AdxDmModel {
                 //Log.d(TAG, "outTREmaArrayList.size: " + outTREmaArrayList.size());
                 double[] trEmaArray = convertArrayListToArray(outTREmaArrayList, 1000);
 
+//                Log.d(TAG, "trueRangeArray: " + trueRangeArray[trueRangeArray.length - 2]);
+//                Log.d(TAG, "maArray: " + maArray[maArray.length - 2]);
+//                Log.d(TAG, "trEmaArray: " + trEmaArray[trEmaArray.length - 2]);
+
 //        double upper = maArray[maArray.length - 2] + trEmaArray[trEmaArray.length - 2] * mult;
 //        double lower = maArray[maArray.length - 2] - trEmaArray[trEmaArray.length - 2] * mult;
                 // double upper = maArray[maArray.length - 1] + trEmaArray[trEmaArray.length - 1] * mult;
@@ -610,23 +616,34 @@ public class AdxDmModel {
 //                Log.d(TAG, "closePrice: " + closePrice[index]);
 //                Log.d(TAG, "lower: " + lower);
                 closePriceCopy[closePriceCopy.length - 1] -= 0.01;
+
+                if (lowPriceCopy[lowPriceCopy.length - 1] > closePriceCopy[closePriceCopy.length - 1]){
+                    lowPriceCopy[lowPriceCopy.length - 1] = closePriceCopy[closePriceCopy.length - 1];
+                }
             }
             closePriceCopy[closePriceCopy.length - 1] += 0.01;
 
             BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[closePriceCopy.length - 1]);
-
-            double buyLevel_01 = BigDecimal.valueOf(0.998).multiply(closePriceCopyBD).doubleValue();
-            double buyLevel_02 = BigDecimal.valueOf(0.9975).multiply(closePriceCopyBD).doubleValue();
-            double buyLevel_03 = BigDecimal.valueOf(0.9970).multiply(closePriceCopyBD).doubleValue();
-            double buyLevel_04 = BigDecimal.valueOf(0.9965).multiply(closePriceCopyBD).doubleValue();
-            double buyLevel_05 = BigDecimal.valueOf(0.9960).multiply(closePriceCopyBD).doubleValue();
+            double sellPrice = roundDouble(closePriceCopy[closePriceCopy.length - 1], symbolBuyPriceDecHashMap.get(symbol));
+            double buyLevel_01 = roundDouble(BigDecimal.valueOf(0.998).multiply(closePriceCopyBD).doubleValue(), symbolBuyPriceDecHashMap.get(symbol));
+            double buyLevel_02 = roundDouble(BigDecimal.valueOf(0.9975).multiply(closePriceCopyBD).doubleValue(), symbolBuyPriceDecHashMap.get(symbol));
+            double buyLevel_03 = roundDouble(BigDecimal.valueOf(0.9970).multiply(closePriceCopyBD).doubleValue(), symbolBuyPriceDecHashMap.get(symbol));
+            double buyLevel_04 = roundDouble(BigDecimal.valueOf(0.9965).multiply(closePriceCopyBD).doubleValue(), symbolBuyPriceDecHashMap.get(symbol));
+            double buyLevel_05 = roundDouble(BigDecimal.valueOf(0.9960).multiply(closePriceCopyBD).doubleValue(), symbolBuyPriceDecHashMap.get(symbol));
+//        double buyLevel_01 = BigDecimal.valueOf(0.998).multiply(closePriceCopyBD).doubleValue();
+//        double buyLevel_02 = BigDecimal.valueOf(0.9975).multiply(closePriceCopyBD).doubleValue();
+//        double buyLevel_03 = BigDecimal.valueOf(0.9970).multiply(closePriceCopyBD).doubleValue();
+//        double buyLevel_04 = BigDecimal.valueOf(0.9965).multiply(closePriceCopyBD).doubleValue();
+//        double buyLevel_05 = BigDecimal.valueOf(0.9960).multiply(closePriceCopyBD).doubleValue();
             Log.d(TAG, "closePriceCopy: " + closePriceCopy[closePriceCopy.length - 1]);
+            Log.d(TAG, "sellPrice: " + sellPrice);
             Log.d(TAG, "buyLevel_01: " + buyLevel_01);
             Log.d(TAG, "buyLevel_02: " + buyLevel_02);
             Log.d(TAG, "buyLevel_03: " + buyLevel_03);
             Log.d(TAG, "buyLevel_04: " + buyLevel_04);
             Log.d(TAG, "buyLevel_05: " + buyLevel_05);
 
+            //priceCalculationListener.onSuccess(sellPrice, buyLevel_01, buyLevel_02, buyLevel_03, buyLevel_04, buyLevel_05);
 
 //        if (lowPrice[index] < closePriceCopy[index]) {
 //                Log.d(TAG, "lowPrice: " + lowPrice[index]);
@@ -851,104 +868,104 @@ public class AdxDmModel {
         }
     }
 
-    public void calculateBol(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, BollingerListener adxListener, String symbol){
-        Core c = new Core();
-        MInteger begin = new MInteger();
-        MInteger length = new MInteger();
-        double[] closeSma = new double[closePrice.length];
-        double[] outRealUpperBand = new double[closePrice.length];
-        double[] outRealMiddleBand =  new double[closePrice.length];
-        double[] outRealLowerBand =  new double[closePrice.length];
-        double maxPercent = 0.0;
-        ArrayList<Double> upperBBArrayList = new ArrayList<>();
-        List<Double> lowerBandList = new ArrayList<>();
-        int optPeriodIndex = 2;
-        double optStdDev = 0.98;
-        double lowerBolPrice = 0.0;
-        double[] modClosePriceArray = closePrice;
-//        modClosePriceArray[modClosePriceArray.length - 1] = 0.17500;
-//        modClosePriceArray[modClosePriceArray.length - 1] = 0.1731828384;
-
-//        for (int periodIndex = 1; periodIndex < 20; periodIndex++) {
-//            for (double deviationIndex = 0.1; deviationIndex < 20.1; deviationIndex = (BigDecimal.valueOf(deviationIndex).add(BigDecimal.valueOf(0.01))).doubleValue()) {
-
-        //Log.d(TAG, "firstClosePrice: " + modClosePriceArray[modClosePriceArray.length - 1]);
-
-//        for (double price : modClosePriceArray){
-//            Log.d(TAG, "closePrice: " + price);
+//    public void calculateBol(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, BollingerListener adxListener, String symbol){
+//        Core c = new Core();
+//        MInteger begin = new MInteger();
+//        MInteger length = new MInteger();
+//        double[] closeSma = new double[closePrice.length];
+//        double[] outRealUpperBand = new double[closePrice.length];
+//        double[] outRealMiddleBand =  new double[closePrice.length];
+//        double[] outRealLowerBand =  new double[closePrice.length];
+//        double maxPercent = 0.0;
+//        ArrayList<Double> upperBBArrayList = new ArrayList<>();
+//        List<Double> lowerBandList = new ArrayList<>();
+//        int optPeriodIndex = 2;
+//        double optStdDev = 0.98;
+//        double lowerBolPrice = 0.0;
+//        double[] modClosePriceArray = closePrice;
+////        modClosePriceArray[modClosePriceArray.length - 1] = 0.17500;
+////        modClosePriceArray[modClosePriceArray.length - 1] = 0.1731828384;
+//
+////        for (int periodIndex = 1; periodIndex < 20; periodIndex++) {
+////            for (double deviationIndex = 0.1; deviationIndex < 20.1; deviationIndex = (BigDecimal.valueOf(deviationIndex).add(BigDecimal.valueOf(0.01))).doubleValue()) {
+//
+//        //Log.d(TAG, "firstClosePrice: " + modClosePriceArray[modClosePriceArray.length - 1]);
+//
+////        for (double price : modClosePriceArray){
+////            Log.d(TAG, "closePrice: " + price);
+////        }
+//        if (modClosePriceArray[modClosePriceArray.length - 1] > lowerBolPrice)
+//        for (int i = 0; modClosePriceArray[modClosePriceArray.length - 1] > lowerBolPrice; i++) {
+//            RetCode smaRetCode = c.sma(0, modClosePriceArray.length - 1, modClosePriceArray, optPeriodIndex, begin, length, closeSma);
+//            if (smaRetCode == RetCode.Success) {
+//
+//                ArrayList<Double> tempCloseSmaArrayList = new ArrayList<>();
+//                ArrayList<Double> closeSmaArrayList = new ArrayList<>();
+//                tempCloseSmaArrayList = removeZeroInArray(modClosePriceArray);
+//
+//                for (int a = 0; a < (optPeriodIndex - tempCloseSmaArrayList.size()); a++) {
+//                    closeSmaArrayList.add(0.0);
+//                }
+//
+//                for (double closeD : tempCloseSmaArrayList) {
+//                    closeSmaArrayList.add(closeD);
+//                }
+//
+//                Log.d(TAG, "closeSmaArrayList.size(): " + closeSmaArrayList.size());
+//
+//                double[] finalSmaClose = new double[closeSmaArrayList.size()];
+//                int index = 0;
+//                for (double closeFinalDouble : closeSmaArrayList) {
+//                    finalSmaClose[index] = closeFinalDouble;
+//                    index = index + 1;
+//                }
+//
+//                Log.d(TAG, "finalSmaClose.length: " + finalSmaClose.length);
+//
+//
+//                RetCode bolRetCode = c.bbands(0, closePrice.length - 1, finalSmaClose, optPeriodIndex, optStdDev,
+//                        optStdDev, MAType.Sma, begin, length, outRealUpperBand, outRealMiddleBand, outRealLowerBand);
+//                double tempMaxPercent = 0.0;
+////                    RetCode bolRetCode = c.bbands(0, closePrice.length - 1, finalSmaClose, periodIndex, deviationIndex,
+////                            deviationIndex, MAType.Sma, begin, length, outRealUpperBand, outRealMiddleBand, outRealLowerBand);
+//
+//                if (bolRetCode == RetCode.Success) {
+//                    //Lower Band = 20-day SMA - (20-day standard deviation of price x 2)
+//
+////                        int bBIndex = 0;
+////                        Log.d(TAG, "Symbol: " + symbol);
+////                        for (double lowerBB : outRealLowerBand) {
+////                                Log.d(TAG, "lowerBB: " + lowerBB);
+////                            bBIndex = bBIndex + 1;
+////                        }
+//
+//                    lowerBandList = removeZeroInArray(outRealLowerBand);
+//                    lowerBolPrice = lowerBandList.get(lowerBandList.size() - 1);
+//                    Log.d(TAG, "lowerBolPrice: " + lowerBolPrice);
+//                    Log.d(TAG, "modPrice: " + modClosePriceArray[modClosePriceArray.length - 1]);
+//                    modClosePriceArray[modClosePriceArray.length - 1] = BigDecimal.valueOf(modClosePriceArray[modClosePriceArray.length - 1]).subtract(BigDecimal.valueOf(0.00001)).doubleValue();
+//
+//                } else {
+//                    Log.d(TAG, "BolRetcodeFailed");
+//                }
+//            } else {
+//                Log.d(TAG, "SmaRetcodeFailed");
+//            }
 //        }
-        if (modClosePriceArray[modClosePriceArray.length - 1] > lowerBolPrice)
-        for (int i = 0; modClosePriceArray[modClosePriceArray.length - 1] > lowerBolPrice; i++) {
-            RetCode smaRetCode = c.sma(0, modClosePriceArray.length - 1, modClosePriceArray, optPeriodIndex, begin, length, closeSma);
-            if (smaRetCode == RetCode.Success) {
 
-                ArrayList<Double> tempCloseSmaArrayList = new ArrayList<>();
-                ArrayList<Double> closeSmaArrayList = new ArrayList<>();
-                tempCloseSmaArrayList = removeZeroInArray(modClosePriceArray);
-
-                for (int a = 0; a < (optPeriodIndex - tempCloseSmaArrayList.size()); a++) {
-                    closeSmaArrayList.add(0.0);
-                }
-
-                for (double closeD : tempCloseSmaArrayList) {
-                    closeSmaArrayList.add(closeD);
-                }
-
-                Log.d(TAG, "closeSmaArrayList.size(): " + closeSmaArrayList.size());
-
-                double[] finalSmaClose = new double[closeSmaArrayList.size()];
-                int index = 0;
-                for (double closeFinalDouble : closeSmaArrayList) {
-                    finalSmaClose[index] = closeFinalDouble;
-                    index = index + 1;
-                }
-
-                Log.d(TAG, "finalSmaClose.length: " + finalSmaClose.length);
-
-
-                RetCode bolRetCode = c.bbands(0, closePrice.length - 1, finalSmaClose, optPeriodIndex, optStdDev,
-                        optStdDev, MAType.Sma, begin, length, outRealUpperBand, outRealMiddleBand, outRealLowerBand);
-                double tempMaxPercent = 0.0;
-//                    RetCode bolRetCode = c.bbands(0, closePrice.length - 1, finalSmaClose, periodIndex, deviationIndex,
-//                            deviationIndex, MAType.Sma, begin, length, outRealUpperBand, outRealMiddleBand, outRealLowerBand);
-
-                if (bolRetCode == RetCode.Success) {
-                    //Lower Band = 20-day SMA - (20-day standard deviation of price x 2)
-
-//                        int bBIndex = 0;
-//                        Log.d(TAG, "Symbol: " + symbol);
-//                        for (double lowerBB : outRealLowerBand) {
-//                                Log.d(TAG, "lowerBB: " + lowerBB);
-//                            bBIndex = bBIndex + 1;
-//                        }
-
-                    lowerBandList = removeZeroInArray(outRealLowerBand);
-                    lowerBolPrice = lowerBandList.get(lowerBandList.size() - 1);
-                    Log.d(TAG, "lowerBolPrice: " + lowerBolPrice);
-                    Log.d(TAG, "modPrice: " + modClosePriceArray[modClosePriceArray.length - 1]);
-                    modClosePriceArray[modClosePriceArray.length - 1] = BigDecimal.valueOf(modClosePriceArray[modClosePriceArray.length - 1]).subtract(BigDecimal.valueOf(0.00001)).doubleValue();
-
-                } else {
-                    Log.d(TAG, "BolRetcodeFailed");
-                }
-            } else {
-                Log.d(TAG, "SmaRetcodeFailed");
-            }
-        }
-
-        double n = lowerBolPrice;
-        double roundedDouble;
-        roundedDouble = roundDouble(n,5);
-        double buyPriceTier1 = roundDouble((roundedDouble - (roundedDouble * 0.002)), 5);
-        double buyPriceTier2 = roundDouble((roundedDouble - (roundedDouble * 0.004)), 5);
-        double buyPriceTier3 = roundDouble((roundedDouble - (roundedDouble * 0.006)), 5);
-        double buyPriceTier4 = roundDouble((roundedDouble - (roundedDouble * 0.007)), 5);
-
-        Log.d(TAG, "FinalBolPrice: " + roundedDouble);
-        Log.d(TAG, "FinalModPrice(-0.2%): " + buyPriceTier1);
-        Log.d(TAG, "FinalModPrice(-0.4%): " + buyPriceTier2);
-        Log.d(TAG, "FinalModPrice(-0.6%): " + buyPriceTier3);
-        Log.d(TAG, "FinalModPrice(-0.7%): " + buyPriceTier4);
+//        double n = lowerBolPrice;
+//        double roundedDouble;
+//        roundedDouble = roundDouble(n,5);
+//        double buyPriceTier1 = roundDouble((roundedDouble - (roundedDouble * 0.002)), 5);
+//        double buyPriceTier2 = roundDouble((roundedDouble - (roundedDouble * 0.004)), 5);
+//        double buyPriceTier3 = roundDouble((roundedDouble - (roundedDouble * 0.006)), 5);
+//        double buyPriceTier4 = roundDouble((roundedDouble - (roundedDouble * 0.007)), 5);
+//
+//        Log.d(TAG, "FinalBolPrice: " + roundedDouble);
+//        Log.d(TAG, "FinalModPrice(-0.2%): " + buyPriceTier1);
+//        Log.d(TAG, "FinalModPrice(-0.4%): " + buyPriceTier2);
+//        Log.d(TAG, "FinalModPrice(-0.6%): " + buyPriceTier3);
+//        Log.d(TAG, "FinalModPrice(-0.7%): " + buyPriceTier4);
 
 //        Log.d(TAG, " ");
 //        Log.d(TAG, "FinalBolPrice: " + roundedDouble);
@@ -969,9 +986,9 @@ public class AdxDmModel {
 //        }
 
 
-        adxListener.onSuccess(roundedDouble, buyPriceTier1, buyPriceTier2, buyPriceTier3, buyPriceTier4);
-
-    }
+//        adxListener.onSuccess(roundedDouble, buyPriceTier1, buyPriceTier2, buyPriceTier3, buyPriceTier4);
+//
+//    }
 
     public void calculateBolOptimization(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, AdxListener adxListener, String symbol){
         Core c = new Core();
@@ -1313,7 +1330,7 @@ public class AdxDmModel {
     public static double roundDouble(double x, int roundTodecimalPlace)
     {
         BigDecimal b = new BigDecimal(Double.toString(x));
-        b = b.setScale(roundTodecimalPlace, BigDecimal.ROUND_HALF_UP);
+        b = b.setScale(roundTodecimalPlace, BigDecimal.ROUND_HALF_DOWN);
         return b.doubleValue();
     }
 }
