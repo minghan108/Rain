@@ -84,7 +84,7 @@ public class AdxDmModel {
 //
 //        pumpHashMap.put(symbol, deltaPercent);
 
-        closePriceBD = BigDecimal.valueOf(closePrice[0]);
+        closePriceBD = BigDecimal.valueOf(closePrice[closePrice.length - 1]);
         maxPriceBD = BigDecimal.valueOf(maxPrice);
         deltaPercent = (closePriceBD.subtract(maxPriceBD)).divide(maxPriceBD, 9, RoundingMode.HALF_DOWN).multiply(BigDecimal.valueOf(100.0)).doubleValue();
         pumpHashMap.put(symbol, deltaPercent);
