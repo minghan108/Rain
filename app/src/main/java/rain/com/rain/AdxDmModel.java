@@ -563,6 +563,7 @@ public class AdxDmModel {
         double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 1000);
         double[] lowPriceCopy = Arrays.copyOfRange(lowPrice, 0, 1000);
         Log.d(TAG, "closePriceCopy.length: " + closePriceCopy.length);
+        double decrement = 1.0;
         double maxPercentGain = 0.0;
 
 //        for (double mIdx = 2.0; mIdx < 3.1; mIdx += 0.1) {
@@ -571,37 +572,41 @@ public class AdxDmModel {
 //        for (int index = 30; index < 999; index++) {
             double lower = 0.0;
 
-            while (closePriceCopy[closePriceCopy.length - 1] > lower) {
-                int timePeriod = 25;
-                int atrRange = 25;
-                double mult = 2.5;
+            for (int decreIndex = 0; decreIndex < symbolBuyPriceDecHashMap.get(symbol); decreIndex++) {
+                decrement = BigDecimal.valueOf(decrement).divide(BigDecimal.valueOf(10.0), 2, RoundingMode.HALF_UP).doubleValue();
+                Log.d(TAG, "decrement: " + decrement);
+
+                while (closePriceCopy[closePriceCopy.length - 1] > lower) {
+                    int timePeriod = 25;
+                    int atrRange = 25;
+                    double mult = 2.5;
 //                    int timePeriod = period;
 //                    int atrRange = period;
 //                    double mult = mIdx;
-                double[] outTREmaArray = new double[closePriceCopy.length];
-                double[] outMaArray = new double[closePriceCopy.length];
-                double[] outTrueRangeArray = new double[closePriceCopy.length];
-                ArrayList<Double> outTREmaArrayList = new ArrayList<>();
-                ArrayList<Double> outMaArrayList = new ArrayList<>();
-                ArrayList<Double> outTrueRangeArrayList = new ArrayList<>();
-                Core core = new Core();
-                MInteger begin = new MInteger();
-                MInteger length = new MInteger();
+                    double[] outTREmaArray = new double[closePriceCopy.length];
+                    double[] outMaArray = new double[closePriceCopy.length];
+                    double[] outTrueRangeArray = new double[closePriceCopy.length];
+                    ArrayList<Double> outTREmaArrayList = new ArrayList<>();
+                    ArrayList<Double> outMaArrayList = new ArrayList<>();
+                    ArrayList<Double> outTrueRangeArrayList = new ArrayList<>();
+                    Core core = new Core();
+                    MInteger begin = new MInteger();
+                    MInteger length = new MInteger();
 
-                RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, highPrice, lowPriceCopy, closePriceCopy, begin, length, outTrueRangeArray);
-                outTrueRangeArrayList = removeZeroInArray(outTrueRangeArray);
-                //Log.d(TAG, "outTrueRangeArrayList.size: " + outTrueRangeArrayList.size());
-                double[] trueRangeArray = convertArrayListToArray(outTrueRangeArrayList, 1000);
+                    RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, highPrice, lowPriceCopy, closePriceCopy, begin, length, outTrueRangeArray);
+                    outTrueRangeArrayList = removeZeroInArray(outTrueRangeArray);
+                    //Log.d(TAG, "outTrueRangeArrayList.size: " + outTrueRangeArrayList.size());
+                    double[] trueRangeArray = convertArrayListToArray(outTrueRangeArrayList, 1000);
 
-                RetCode maRetcode = core.ema(0, closePriceCopy.length - 1, closePriceCopy, timePeriod, begin, length, outMaArray);
-                outMaArrayList = removeZeroInArray(outMaArray);
-                //Log.d(TAG, "outMaArrayList.size: " + outMaArrayList.size());
-                double[] maArray = convertArrayListToArray(outMaArrayList, 1000);
+                    RetCode maRetcode = core.ema(0, closePriceCopy.length - 1, closePriceCopy, timePeriod, begin, length, outMaArray);
+                    outMaArrayList = removeZeroInArray(outMaArray);
+                    //Log.d(TAG, "outMaArrayList.size: " + outMaArrayList.size());
+                    double[] maArray = convertArrayListToArray(outMaArrayList, 1000);
 
-                RetCode rangeMaRetCode = core.ema(0, trueRangeArray.length - 1, trueRangeArray, atrRange, begin, length, outTREmaArray);
-                outTREmaArrayList = removeZeroInArray(outTREmaArray);
-                //Log.d(TAG, "outTREmaArrayList.size: " + outTREmaArrayList.size());
-                double[] trEmaArray = convertArrayListToArray(outTREmaArrayList, 1000);
+                    RetCode rangeMaRetCode = core.ema(0, trueRangeArray.length - 1, trueRangeArray, atrRange, begin, length, outTREmaArray);
+                    outTREmaArrayList = removeZeroInArray(outTREmaArray);
+                    //Log.d(TAG, "outTREmaArrayList.size: " + outTREmaArrayList.size());
+                    double[] trEmaArray = convertArrayListToArray(outTREmaArrayList, 1000);
 
 //                Log.d(TAG, "trueRangeArray: " + trueRangeArray[trueRangeArray.length - 2]);
 //                Log.d(TAG, "maArray: " + maArray[maArray.length - 2]);
@@ -609,19 +614,20 @@ public class AdxDmModel {
 
 //        double upper = maArray[maArray.length - 2] + trEmaArray[trEmaArray.length - 2] * mult;
 //        double lower = maArray[maArray.length - 2] - trEmaArray[trEmaArray.length - 2] * mult;
-                // double upper = maArray[maArray.length - 1] + trEmaArray[trEmaArray.length - 1] * mult;
-                lower = maArray[maArray.length - 1] - trEmaArray[trEmaArray.length - 1] * mult;
-                //Log.d(TAG, "upper: " + upper);
+                    // double upper = maArray[maArray.length - 1] + trEmaArray[trEmaArray.length - 1] * mult;
+                    lower = maArray[maArray.length - 1] - trEmaArray[trEmaArray.length - 1] * mult;
+                    //Log.d(TAG, "upper: " + upper);
 //                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
 //                Log.d(TAG, "closePrice: " + closePrice[index]);
 //                Log.d(TAG, "lower: " + lower);
-                closePriceCopy[closePriceCopy.length - 1] -= 0.01;
+                    closePriceCopy[closePriceCopy.length - 1] -= decrement;
 
-                if (lowPriceCopy[lowPriceCopy.length - 1] > closePriceCopy[closePriceCopy.length - 1]){
-                    lowPriceCopy[lowPriceCopy.length - 1] = closePriceCopy[closePriceCopy.length - 1];
+                    if (lowPriceCopy[lowPriceCopy.length - 1] > closePriceCopy[closePriceCopy.length - 1]) {
+                        lowPriceCopy[lowPriceCopy.length - 1] = closePriceCopy[closePriceCopy.length - 1];
+                    }
                 }
+                closePriceCopy[closePriceCopy.length - 1] += decrement;
             }
-            closePriceCopy[closePriceCopy.length - 1] += 0.01;
 
             BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[closePriceCopy.length - 1]);
             double sellPrice = roundDouble(closePriceCopy[closePriceCopy.length - 1], symbolBuyPriceDecHashMap.get(symbol));
