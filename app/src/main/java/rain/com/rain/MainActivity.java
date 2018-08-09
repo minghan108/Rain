@@ -441,13 +441,27 @@ public class MainActivity extends AppCompatActivity {
 
                     breakoutTextViewString = "";
 
-                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
+//                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
+//                        Double value = pumpHashMapValues.get(i);
+//
+//                        for (String key : pumpHashMapKey){
+//                            if (pumpHashMap.get(key).equals(value)){
+//                                breakoutTextViewString += key + " " + value + "\n";
+//                                if (value > 7.0){
+//                                    createNotification("Pump: " + key + " " + value);
+//                                }
+//                                break;
+//                            }
+//                        }
+//                    }
+
+                    for(int i = 0; i < 11; i++){
                         Double value = pumpHashMapValues.get(i);
 
                         for (String key : pumpHashMapKey){
                             if (pumpHashMap.get(key).equals(value)){
                                 breakoutTextViewString += key + " " + value + "\n";
-                                if (value > 7.0){
+                                if (value < -4.0){
                                     createNotification("Pump: " + key + " " + value);
                                 }
                                 break;
@@ -483,13 +497,27 @@ public class MainActivity extends AppCompatActivity {
 
                     breakoutTextViewString = "";
 
-                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
+//                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
+//                        Double value = pumpHashMapValues.get(i);
+//
+//                        for (String key : pumpHashMapKey){
+//                            if (pumpHashMap.get(key).equals(value)){
+//                                breakoutTextViewString += key + " " + value + "\n";
+//                                if (value < 4.5){
+//                                    createNotification("Pump: " + key + " " + value);
+//                                }
+//                                break;
+//                            }
+//                        }
+//                    }
+
+                    for(int i = 0; i < 11; i++){
                         Double value = pumpHashMapValues.get(i);
 
                         for (String key : pumpHashMapKey){
                             if (pumpHashMap.get(key).equals(value)){
                                 breakoutTextViewString += key + " " + value + "\n";
-                                if (value > 9.0){
+                                if (value < -4.0){
                                     createNotification("Pump: " + key + " " + value);
                                 }
                                 break;

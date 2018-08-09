@@ -58,6 +58,40 @@ public class AdxDmModel {
 
     }
 
+    public void calculateNegativePumpPercent(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
+        Core core = new Core();
+        double maxPrice = 0.0;
+        double maxPriceTotal = 0.0;
+//        int maxPriceIndex = 0;
+        double deltaPercent = 0.0;
+        BigDecimal closePriceBD;
+        BigDecimal maxPriceBD;
+
+        for (int j = 0; j < 4; j++){
+            maxPriceTotal += openPrice[j];
+        }
+
+        maxPrice = BigDecimal.valueOf(maxPriceTotal).divide(BigDecimal.valueOf(4.0), 9, RoundingMode.HALF_DOWN).doubleValue();
+//
+//        if (openPrice[openPrice.length - 1] > maxPrice){
+//            maxPrice = openPrice[openPrice.length - 1];
+//            maxPriceIndex = openPrice.length - 1;
+//        }
+
+//        closePriceBD = BigDecimal.valueOf(closePrice[closePrice.length - 1]);
+//        maxPriceBD = BigDecimal.valueOf(maxPrice);
+//        deltaPercent = (closePriceBD.subtract(maxPriceBD)).divide(maxPriceBD, 9, RoundingMode.HALF_DOWN).multiply(BigDecimal.valueOf(100.0)).doubleValue();
+//
+//        pumpHashMap.put(symbol, deltaPercent);
+
+        closePriceBD = BigDecimal.valueOf(closePrice[0]);
+        maxPriceBD = BigDecimal.valueOf(maxPrice);
+        deltaPercent = (closePriceBD.subtract(maxPriceBD)).divide(maxPriceBD, 9, RoundingMode.HALF_DOWN).multiply(BigDecimal.valueOf(100.0)).doubleValue();
+        pumpHashMap.put(symbol, deltaPercent);
+        smaListener.onSuccess();
+
+    }
+
     public void calculateSupportResistance(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, AdxListener adxListener, String symbol){
         double[] smaOutArray = new double[volume.length];
         ArrayList<Double> smaOutArrayList = new ArrayList<>();

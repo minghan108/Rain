@@ -219,7 +219,8 @@ public class Parser {
 
 
         //adxDmModel.calculateSupportResistance(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
-        adxDmModel.calculatePumpPercent(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
+        //adxDmModel.calculatePumpPercent(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
+        adxDmModel.calculateNegativePumpPercent(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
         //adxDmModel.calculateSma(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
         //adxDmModel.calculateStochiastic(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
 //        adxDmModel.calculateBol(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
@@ -247,7 +248,7 @@ public class Parser {
 
             try {
                 String symbol = jsonArray.getJSONObject(i).getString("symbol");
-                if (symbol.contains("BTC") && !symbol.contains("HOT")){
+                if ((symbol.contains("BTC") || symbol.contains("USDT")) && !symbol.contains("HOT") && !symbol.contains("DENT")){
                     symbolList.add(symbol);
                     symbolBreakoutMap.put(symbol, false);
                 }
