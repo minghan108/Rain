@@ -8,6 +8,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
@@ -17,6 +18,7 @@ import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -99,8 +101,10 @@ public class MainActivity extends AppCompatActivity {
     public static Double startCoin = 0.0;
     public double maxDiDiff = 0.0;
     public static int limit  = 1000;
+    public static int decimalPlaces  = 0;
     public static Long serverTime = 0L;
-    public static String symbol = "TUSDBTC";
+    public static String symbol = "BTCUSDT";
+    public static String sellSymbol = "ETC";
 
 
     @Override
@@ -118,7 +122,8 @@ public class MainActivity extends AppCompatActivity {
         symbolQuantDecHashMap.put("BTCUSDT", 6);
         symbolBuyPriceDecHashMap.put("BTCUSDT", 2);
 
-        new FindPumpAsyncTask().execute();
+        new ReversalBandBuySellAsyncTask().execute();
+//        sendEmail();
     }
 
     public static long localToGMT() {
@@ -128,6 +133,20 @@ public class MainActivity extends AppCompatActivity {
     public static long localToGMTOffset() {
         return (new Date().getTime() - 8674560000L);
 //        return (new Date().getTime() - 8760960000L);
+    }
+
+    protected void sendEmail() {
+//        Intent i = new Intent(Intent.ACTION_SEND);
+//        i.setType("message/rfc822");
+//        i.putExtra(Intent.EXTRA_EMAIL  , new String[]{"2894893036@txt.freedommobile.ca"});
+//        i.putExtra(Intent.EXTRA_SUBJECT, "subject of email");
+//        i.putExtra(Intent.EXTRA_TEXT   , "body of email");
+//        try {
+//            startActivity(Intent.createChooser(i, "Send mail..."));
+//        } catch (android.content.ActivityNotFoundException ex) {
+//            Toast.makeText(MainActivity.this, "There are no email clients installed.", Toast.LENGTH_SHORT).show();
+//            Log.d(TAG, "send email failed");
+//        }
     }
 
     @Override
@@ -210,14 +229,15 @@ public class MainActivity extends AppCompatActivity {
                 int placeOrderIndex = 0;
                 buyOrderQuantityPercentList.clear();
 
-                if ((usdtCoin * 0.1) >= 50) {
+                if ((usdtCoin * 0.2) >= 50) {
                     Log.d(TAG, "(usdtCoin * 0.1) >= 50");
-                    placeOrderIndex = 5;
-                    buyOrderQuantityPercentList.add(0.3);
-                    buyOrderQuantityPercentList.add(0.3);
+                    placeOrderIndex = buyOrderTierList.size();
+                    buyOrderQuantityPercentList.add(0.1);
                     buyOrderQuantityPercentList.add(0.2);
                     buyOrderQuantityPercentList.add(0.1);
-                    buyOrderQuantityPercentList.add(0.099);
+//                    buyOrderQuantityPercentList.add(0.2);
+//                    buyOrderQuantityPercentList.add(0.1);
+//                    buyOrderQuantityPercentList.add(0.099);
 
 //                } else if ((usdtCoin * 0.22) >= 10.2){
 //                    Log.d(TAG, "(usdtCoin * 0.22) >= 10.2");
@@ -243,7 +263,7 @@ public class MainActivity extends AppCompatActivity {
                 for (int j = 0; j < placeOrderIndex; j++) {
                     String signature = "";
                     buyQuantity = 0.0;
-                    buyQuantity = ((BigDecimal.valueOf(usdtCoin).multiply(BigDecimal.valueOf(buyOrderQuantityPercentList.get(j)))).divide(BigDecimal.valueOf(buyOrderTierList.get(j)), symbolQuantDecHashMap.get(symbol), RoundingMode.HALF_DOWN)).doubleValue();
+                    buyQuantity = ((BigDecimal.valueOf(usdtCoin).multiply(BigDecimal.valueOf(buyOrderQuantityPercentList.get(j)))).divide(BigDecimal.valueOf(buyOrderTierList.get(j)), 2, RoundingMode.HALF_DOWN)).doubleValue();
                     Log.d(TAG, "buyQuantity: " + buyQuantity);
                     String buyQueryString = getBuyQueryString(buyOrderTierList.get(j), buyQuantity);
                     String queryStrSignature = "";
@@ -349,6 +369,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(Long serverTime) {
                 MainActivity.serverTime = serverTime;
+//                Log.d(TAG, "gmtTime: " + localToGMT());
+//                Log.d(TAG, "gmtTimeOffset: " + localToGMTOffset());
+//                long gmtTime = localToGMT() * 1000L;
+//                long gmtTimeOffset = localToGMTOffset() * 1000L;
                 String signature = "";
                 String openOrderQueryString = getOpenOrderQueryString();
                 String queryStrSignature = "";
@@ -370,7 +394,7 @@ public class MainActivity extends AppCompatActivity {
 
         PriceCalculationListener priceCalculationListener = new PriceCalculationListener() {
             @Override
-            public void onSuccess(double sellingPrice, double buyPriceTier1, double buyPriceTier2, double buyPriceTier3, double buyPriceTier4, double buyPriceTier5) {
+            public void onSuccess(double sellingPrice, double buyPriceTier1, double buyPriceTier2, double buyPriceTier3) {
                 buyOrderTierList.clear();
                 buyPrice = buyPriceTier1;
                 sellPrice = sellingPrice;
@@ -378,13 +402,15 @@ public class MainActivity extends AppCompatActivity {
                 buyOrderTier1 = buyPriceTier1;
                 buyOrderTier2 = buyPriceTier2;
                 buyOrderTier3 = buyPriceTier3;
-                buyOrderTier4 = buyPriceTier4;
-                buyOrderTier5 = buyPriceTier5;
+//                buyOrderTier4 = buyPriceTier4;
+//                buyOrderTier5 = buyPriceTier5;
+//                buyOrderTier5 = buyPriceTier6;
                 buyOrderTierList.add(buyPriceTier1);
                 buyOrderTierList.add(buyPriceTier2);
                 buyOrderTierList.add(buyPriceTier3);
-                buyOrderTierList.add(buyPriceTier4);
-                buyOrderTierList.add(buyPriceTier5);
+//                buyOrderTierList.add(buyPriceTier4);
+//                buyOrderTierList.add(buyPriceTier5);
+//                buyOrderTierList.add(buyPriceTier6);
                 orderManager.sendServerTimeRequest(serverTimeListener1);
             }
 
@@ -774,12 +800,72 @@ public class MainActivity extends AppCompatActivity {
         return b.doubleValue();
     }
 
-    private class FindPumpAsyncTask extends AsyncTask<Void, Void, Void> {
+    private void checkBuyOrderFilled(){
+        final AccountInfoListener accountInfoListener = new AccountInfoListener() {
+            @Override
+            public void onSuccess(HashMap<String, Balance> balanceHashMap) {
+
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
+        final ServerTimeListener serverTimeListener = new ServerTimeListener() {
+            @Override
+            public void onSuccess(Long serverTime) {
+                MainActivity.serverTime = serverTime;
+                String signature = "";
+                String accountInfoQueryString = "";
+                String queryStrSignature = "";
+
+                try {
+                    accountInfoQueryString = getAccountInfoQueryString();
+                } catch (CustomException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    signature = orderManager.encode(secretKey, accountInfoQueryString);
+                    queryStrSignature = accountInfoQueryString + "&signature=" + signature;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                orderManager.sendAccountInfoRequest(accountInfoListener, queryStrSignature);
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
+        orderManager.sendServerTimeRequest(serverTimeListener);
+    }
+
+    private class ReversalBandBuySellAsyncTask extends AsyncTask<Void, Void, Void> {
 
         @Override
         protected Void doInBackground(Void... voids) {
             sendDefKlinesRequest(symbol);
             //sendGetSymbolsRequest();
+            return null;
+        }
+
+        @Override
+        protected void onPreExecute() {}
+
+        @Override
+        protected void onProgressUpdate(Void... values) {}
+    }
+
+    private class SellOrderCheckerAsyncTask extends AsyncTask<Void, Void, Void> {
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            checkBuyOrderFilled();
             return null;
         }
 

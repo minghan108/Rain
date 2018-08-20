@@ -223,12 +223,19 @@ public class Parser {
         //adxDmModel.calculateSma(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
         //adxDmModel.calculateRSI(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
         //adxDmModel.calculateWaveC(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
-        adxDmModel.calculateReversalBand(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
+        //adxDmModel.calculateReversalBand(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
+        //adxDmModel.calculateReversalBandOptimization(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
+        //adxDmModel.calculateLowerEmaOptimization(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
+        adxDmModel.calculateLowerEma(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
+        //adxDmModel.calculateUpperEmaOptimization(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
+        //adxDmModel.calculateHeikinAshiCandle(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray);
+
         //adxDmModel.calculatePSar(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
         //adxDmModel.calculateStochiastic(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, smaListener, symbol);
 //        adxDmModel.calculateBol(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
         //adxDmModel.calculateBolOptimization(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
         //adxDmModel.calculateAdxDi(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
+        //adxDmModel.calculateAdxDiTest(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
 
         //adxDmModel.calculateBolCLoseOptimization(highPricePrimArray, lowPricePrimArray, closePricePrimArray, volumePricePrimArray, adxListener, symbol);
 

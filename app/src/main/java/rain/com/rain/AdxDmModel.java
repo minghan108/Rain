@@ -9,18 +9,25 @@ import com.tictactec.ta.lib.RetCode;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
 
 import static rain.com.rain.MainActivity.buyState;
 import static rain.com.rain.MainActivity.currentDiState;
+import static rain.com.rain.MainActivity.decimalPlaces;
 import static rain.com.rain.MainActivity.initialDiState;
 import static rain.com.rain.MainActivity.isFirstLaunch;
 import static rain.com.rain.MainActivity.isFirstScanComplete;
 import static rain.com.rain.MainActivity.isMinusDiGreater;
 import static rain.com.rain.MainActivity.pumpHashMap;
 import static rain.com.rain.MainActivity.sellRemainderState;
+import static rain.com.rain.MainActivity.startMoney;
 import static rain.com.rain.MainActivity.symbolBreakoutMap;
 import static rain.com.rain.MainActivity.symbolBuyPriceDecHashMap;
 
@@ -28,6 +35,8 @@ public class AdxDmModel {
     private String TAG = "AdxDmModel ";
     private boolean isFirstLaunch = true;
     private ArrayList<String> targetSymbolList = new ArrayList<>();
+    private final double PRICE_OFFSET = 0.98475454;
+
 
     public void calculatePumpPercent(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
         Core core = new Core();
@@ -559,22 +568,89 @@ public class AdxDmModel {
 //        macd6 = usewc ? fastMA6 - slowMA6 : na
     }
 
+    public  HashMap<String, double[]> calculateHeikinAshiCandle(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice){
+        int maxIndex = closePrice.length;
+        double[] haCloseArray = new double[closePrice.length];
+        double[] haOpenArray = new double[closePrice.length];
+        double[] haLowArray = new double[closePrice.length];
+        double[] haHighArray = new double[closePrice.length];
+        BigDecimal firCloseBD = BigDecimal.valueOf(closePrice[0]);
+        BigDecimal firOpenBD = BigDecimal.valueOf(openPrice[0]);
+        BigDecimal firLowBD = BigDecimal.valueOf(lowPrice[0]);
+        BigDecimal firHighBD = BigDecimal.valueOf(highPrice[0]);
+        haCloseArray[0] = (firCloseBD.add(firOpenBD).add(firLowBD).add(firHighBD)).divide(BigDecimal.valueOf(4.0), 9, RoundingMode.HALF_UP).doubleValue();
+        haOpenArray[0] = (firOpenBD.add(firCloseBD)).divide(BigDecimal.valueOf(2.0), 9, RoundingMode.HALF_UP).doubleValue();
+        haLowArray[0] = lowPrice[0];
+        haHighArray[0] = highPrice[0];
+        HashMap<String, double[]> haHashMap = new HashMap<>();
+
+        for (int index = 1; index < maxIndex; index++){
+            BigDecimal curCloseBD = BigDecimal.valueOf(closePrice[index]);
+            BigDecimal curOpenBD = BigDecimal.valueOf(openPrice[index]);
+            BigDecimal curLowBD = BigDecimal.valueOf(lowPrice[index]);
+            BigDecimal curHighBD = BigDecimal.valueOf(highPrice[index]);
+            BigDecimal prevCloseBD = BigDecimal.valueOf(closePrice[index - 1]);
+            BigDecimal prevOpenBD = BigDecimal.valueOf(openPrice[index - 1]);
+            haCloseArray[index] = (curCloseBD.add(curOpenBD).add(curLowBD).add(curHighBD)).divide(BigDecimal.valueOf(4.0), 9, RoundingMode.HALF_UP).doubleValue();
+            haOpenArray[index] = (prevOpenBD.add(prevCloseBD)).divide(BigDecimal.valueOf(2.0), 9, RoundingMode.HALF_UP).doubleValue();
+            haLowArray[index] = Math.min(lowPrice[index], Math.min(haOpenArray[index], haCloseArray[index]));
+            haHighArray[index] = Math.max(highPrice[index], Math.max(haOpenArray[index], haCloseArray[index]));
+        }
+
+        haHashMap.put("haCloseArray", haCloseArray);
+        haHashMap.put("haOpenArray", haOpenArray);
+        haHashMap.put("haLowArray", haLowArray);
+        haHashMap.put("haHighArray", haHighArray);
+        BigDecimal total;
+        for (int index = haCloseArray.length - 1; index > haCloseArray.length - 7; index--){
+
+
+        }
+
+        localToGMT();
+        Log.d(TAG, "haCloseArray: " + haCloseArray[haCloseArray.length - 2]);
+        Log.d(TAG, "haOpenArray: " + haOpenArray[haOpenArray.length - 2]);
+        Log.d(TAG, "haLowArray: " + haLowArray[haLowArray.length - 2]);
+        Log.d(TAG, "haHighArray: " + haHighArray[haHighArray.length - 2]);
+
+
+
+        return haHashMap;
+    }
+
+    public void localToGMT() {
+        String format = "HH:mm";
+        final SimpleDateFormat sdf = new SimpleDateFormat(format);
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        String utcTime = sdf.format(new Date());
+        Log.d(TAG, "utcTime: " + utcTime);
+    }
+
     public void calculateReversalBand(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol) {
         double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 1000);
         double[] lowPriceCopy = Arrays.copyOfRange(lowPrice, 0, 1000);
         Log.d(TAG, "closePriceCopy.length: " + closePriceCopy.length);
         double decrement = 1.0;
-        double maxPercentGain = 0.0;
-        int maxDecrement = 0;
-        String text = Double.toString(Math.abs(closePrice[closePrice.length - 1]));
-        int integerPlaces = text.indexOf('.');
-        maxDecrement = text.length() - integerPlaces;
+        int maxDecrement = findDecimalPlaces(closePrice);
+        decimalPlaces = maxDecrement;
         Log.d(TAG, "maxDecrement: " + maxDecrement);
-        Log.d(TAG, "closePrice: " + closePrice[closePrice.length - 1]);
 
-
+//        for (double hp : highPrice){
+//            Log.d(TAG, "highPrice: " + hp);
+//        }
+//
+//        for (double lp : lowPrice){
+//            Log.d(TAG, "lowPrice: " + lp);
+//        }
+//
+//        for (double op : openPrice){
+//            Log.d(TAG, "openPrice: " + op);
+//        }
+//
+//        for (double cp : closePrice){
+//            Log.d(TAG, "closePrice: " + cp);
+//        }
 //        for (double mIdx = 2.0; mIdx < 3.1; mIdx += 0.1) {
-        double netPercentGain = 0.0;
 
 //        for (int index = 30; index < 999; index++) {
             double lower = 0.0;
@@ -582,6 +658,7 @@ public class AdxDmModel {
             for (int decreIndex = 0; decreIndex < maxDecrement; decreIndex++) {
                 decrement = BigDecimal.valueOf(decrement).divide(BigDecimal.valueOf(10.0), 10, RoundingMode.HALF_UP).doubleValue();
                 Log.d(TAG, "decrement: " + decrement);
+                int closeIndex = 0;
 
                 while (closePriceCopy[closePriceCopy.length - 1] > lower) {
                     int timePeriod = 25;
@@ -600,7 +677,7 @@ public class AdxDmModel {
                     MInteger begin = new MInteger();
                     MInteger length = new MInteger();
 
-                    RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, highPrice, lowPriceCopy, closePriceCopy, begin, length, outTrueRangeArray);
+                    RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, openPrice, lowPriceCopy, closePriceCopy, begin, length, outTrueRangeArray);
                     outTrueRangeArrayList = removeZeroInArray(outTrueRangeArray);
                     //Log.d(TAG, "outTrueRangeArrayList.size: " + outTrueRangeArrayList.size());
                     double[] trueRangeArray = convertArrayListToArray(outTrueRangeArrayList, 1000);
@@ -627,86 +704,886 @@ public class AdxDmModel {
 //                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
 //                Log.d(TAG, "closePrice: " + closePrice[index]);
 //                Log.d(TAG, "lower: " + lower);
-                    closePriceCopy[closePriceCopy.length - 1] -= decrement;
+                    //closePriceCopy[closePriceCopy.length - 1] -= decrement;
+                    closePriceCopy[closePriceCopy.length - 1] = BigDecimal.valueOf(closePriceCopy[closePriceCopy.length - 1]).subtract(BigDecimal.valueOf(decrement)).doubleValue();
 
                     if (lowPriceCopy[lowPriceCopy.length - 1] > closePriceCopy[closePriceCopy.length - 1]) {
                         lowPriceCopy[lowPriceCopy.length - 1] = closePriceCopy[closePriceCopy.length - 1];
                     }
+
+                    closeIndex += 1;
+                    Log.d(TAG, "closeIndex: " + closeIndex);
+                    Log.d(TAG, "lower: " + lower);
+
+                    if (closeIndex == 1){
+                        break;
+                    }
                 }
 
                 if (lowPriceCopy[lowPriceCopy.length - 1] == closePriceCopy[closePriceCopy.length - 1]) {
-                    lowPriceCopy[lowPriceCopy.length - 1] += decrement;
+                    //lowPriceCopy[lowPriceCopy.length - 1] += decrement;
+                    lowPriceCopy[lowPriceCopy.length - 1] = BigDecimal.valueOf(lowPriceCopy[lowPriceCopy.length - 1]).add(BigDecimal.valueOf(decrement)).doubleValue();
                 }
-                closePriceCopy[closePriceCopy.length - 1] += decrement;
+                //closePriceCopy[closePriceCopy.length - 1] += decrement;
+                closePriceCopy[closePriceCopy.length - 1] = BigDecimal.valueOf(closePriceCopy[closePriceCopy.length - 1]).add(BigDecimal.valueOf(decrement)).doubleValue();
             }
 
-            BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[closePriceCopy.length - 1]);
-            double sellPrice = roundDouble(closePriceCopy[closePriceCopy.length - 1], maxDecrement);
-            double buyLevel_01 = roundDouble(BigDecimal.valueOf(0.998).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
-            double buyLevel_02 = roundDouble(BigDecimal.valueOf(0.9975).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
-            double buyLevel_03 = roundDouble(BigDecimal.valueOf(0.9970).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
-            double buyLevel_04 = roundDouble(BigDecimal.valueOf(0.9965).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
-            double buyLevel_05 = roundDouble(BigDecimal.valueOf(0.9960).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
-//        double buyLevel_01 = BigDecimal.valueOf(0.998).multiply(closePriceCopyBD).doubleValue();
-//        double buyLevel_02 = BigDecimal.valueOf(0.9975).multiply(closePriceCopyBD).doubleValue();
-//        double buyLevel_03 = BigDecimal.valueOf(0.9970).multiply(closePriceCopyBD).doubleValue();
-//        double buyLevel_04 = BigDecimal.valueOf(0.9965).multiply(closePriceCopyBD).doubleValue();
-//        double buyLevel_05 = BigDecimal.valueOf(0.9960).multiply(closePriceCopyBD).doubleValue();
-            Log.d(TAG, "closePriceCopy: " + closePriceCopy[closePriceCopy.length - 1]);
-            Log.d(TAG, "sellPrice: " + sellPrice);
-            Log.d(TAG, "buyLevel_01: " + buyLevel_01);
-            Log.d(TAG, "buyLevel_02: " + buyLevel_02);
-            Log.d(TAG, "buyLevel_03: " + buyLevel_03);
-            Log.d(TAG, "buyLevel_04: " + buyLevel_04);
-            Log.d(TAG, "buyLevel_05: " + buyLevel_05);
+        closePriceCopy[closePriceCopy.length - 1] = BigDecimal.valueOf(closePriceCopy[closePriceCopy.length - 1]).multiply(BigDecimal.valueOf(PRICE_OFFSET)).doubleValue();
+        closePriceCopy[closePriceCopy.length - 1] = roundDouble(closePriceCopy[closePriceCopy.length - 1], maxDecrement - 1);
+        BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[closePriceCopy.length - 1]);
 
-            //priceCalculationListener.onSuccess(sellPrice, buyLevel_01, buyLevel_02, buyLevel_03, buyLevel_04, buyLevel_05);
+        double sellPrice = closePriceCopy[closePriceCopy.length - 1];
+//        double buyLevel_01 = roundDouble(BigDecimal.valueOf(0.998).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
+//        double buyLevel_02 = roundDouble(BigDecimal.valueOf(0.9975).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
+//        double buyLevel_03 = roundDouble(BigDecimal.valueOf(0.9970).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
+//        double buyLevel_04 = roundDouble(BigDecimal.valueOf(0.9965).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
+//        double buyLevel_05 = roundDouble(BigDecimal.valueOf(0.9960).multiply(closePriceCopyBD).doubleValue(), maxDecrement);
 
-//        if (lowPrice[index] < closePriceCopy[index]) {
-//                Log.d(TAG, "lowPrice: " + lowPrice[index]);
-//                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
-//                Log.d(TAG, "next highPrice: " + highPrice[index + 1]);
-//
-//                BigDecimal highPriceBD = BigDecimal.valueOf(highPrice[index + 1]);
-//                BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[index]);
-//                double percentGain = (highPriceBD.subtract(closePriceCopyBD)).divide(closePriceCopyBD, 8, RoundingMode.HALF_DOWN).doubleValue();
-//
-//                Log.d(TAG, "percentGain: " + percentGain);
-//                netPercentGain += percentGain;
-//            }
-//            Log.d(TAG, "index: " + index);
-//            closePriceCopy[index] = closePrice[index];
-//        }
-//
-//        //Log.d(TAG, "period: " + period);
-////            Log.d(TAG, "mult: " + mIdx);
-//        Log.d(TAG, "netPercentGain: " + netPercentGain);
-//        if (maxPercentGain < netPercentGain) {
-//            maxPercentGain = netPercentGain;
-//        }
-////        }
-//
-//        Log.d(TAG, "maxPercentGain: " + maxPercentGain);
+        double buyLevel_01 = roundDouble(closePriceCopyBD.multiply(BigDecimal.valueOf(0.998)).doubleValue(), maxDecrement - 1);
+        double buyLevel_02 = roundDouble(closePriceCopyBD.multiply(BigDecimal.valueOf(0.996)).doubleValue(), maxDecrement - 1);
+        double buyLevel_03 = roundDouble(closePriceCopyBD.multiply(BigDecimal.valueOf(0.994)).doubleValue(), maxDecrement - 1);
+        double buyLevel_04 = roundDouble(closePriceCopyBD.multiply(BigDecimal.valueOf(0.992)).doubleValue(), maxDecrement - 1);
+        double buyLevel_05 = roundDouble(closePriceCopyBD.multiply(BigDecimal.valueOf(0.990)).doubleValue(), maxDecrement - 1);
+        double buyLevel_06 = roundDouble(closePriceCopyBD.multiply(BigDecimal.valueOf(0.988)).doubleValue(), maxDecrement - 1);
+
+        Log.d(TAG, "closePriceCopy: " + closePriceCopy[closePriceCopy.length - 1]);
+        Log.d(TAG, "sellPrice: " + sellPrice);
+        Log.d(TAG, "buyLevel_01: " + buyLevel_01);
+        Log.d(TAG, "buyLevel_02: " + buyLevel_02);
+        Log.d(TAG, "buyLevel_03: " + buyLevel_03);
+        Log.d(TAG, "buyLevel_04: " + buyLevel_04);
+        Log.d(TAG, "buyLevel_05: " + buyLevel_05);
+        Log.d(TAG, "buyLevel_06: " + buyLevel_06);
+
+        //priceCalculationListener.onSuccess(sellPrice, buyLevel_02, buyLevel_03, buyLevel_04);
+
     }
 
-    public void calculateReversalBandOptimization(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
+    public void calculateUpperEmaOptimization(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol){
         double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 1000);
+        double[] highPriceCopy = Arrays.copyOfRange(highPrice, 0, 1000);
+        double[] openPriceCopy = Arrays.copyOfRange(openPrice, 0, 1000);
+        Log.d(TAG, "closePriceCopy.length: " + closePriceCopy.length);
+        int maxDecrement = findDecimalPlaces(closePrice);
+        Log.d(TAG, "maxDecrement: " + maxDecrement);
+        int closeIndex;
+        boolean isOpenLessLower;
+        double startingMoney = 5000.0;
+
+        for (double mIdx = 1.0; mIdx < 2.0; mIdx += 0.01) {
+            for (int lengthIdx = 2; lengthIdx < 101; lengthIdx++) {
+//                for (int atrIdx = 25; atrIdx < 28; atrIdx++) {
+                int negativeGainCounter = 0;
+                double minPercentGain = 1.0;
+                double cMinPercentGain = 1.0;
+
+                for (int index = 60; index < 999; index++) {
+                    double upper = 0.0;
+                    double decrement = 100.0;
+                    closePriceCopy[index] = openPriceCopy[index];
+                    highPriceCopy[index] = openPriceCopy[index];
+                    closeIndex = 0;
+                    double percentGain = 0.0;
+                    double cPercentGain = 0.0;
+                    isOpenLessLower = false;
+
+                    for (int decreIndex = 0; decreIndex <= (maxDecrement + 1); decreIndex++) {
+                        decrement = BigDecimal.valueOf(decrement).divide(BigDecimal.valueOf(10.0), 10, RoundingMode.HALF_UP).doubleValue();
+                        //Log.d(TAG, "decrement: " + decrement);
+
+                        while (closePriceCopy[index] > upper) {
+                            int timePeriod = lengthIdx;
+//                                int atrRange = atrIdx;
+                            double mult = mIdx;
+
+                            double[] outTREmaArray = new double[closePriceCopy.length];
+                            double[] outMaArray = new double[closePriceCopy.length];
+                            double[] outTrueRangeArray = new double[closePriceCopy.length];
+                            ArrayList<Double> outTREmaArrayList = new ArrayList<>();
+                            ArrayList<Double> outMaArrayList = new ArrayList<>();
+                            ArrayList<Double> outTrueRangeArrayList = new ArrayList<>();
+                            Core core = new Core();
+                            MInteger begin = new MInteger();
+                            MInteger length = new MInteger();
+
+                            RetCode maRetcode = core.ema(0, closePriceCopy.length - 1, closePriceCopy, timePeriod, begin, length, outMaArray);
+                            outMaArrayList = removeZeroInArray(outMaArray);
+                            double[] maArray = convertArrayListToArray(outMaArrayList, 1000);
+
+                            upper = mult * maArray[index];
+
+                            //closePriceCopy[index] -= decrement;
+                            closePriceCopy[index] = BigDecimal.valueOf(closePriceCopy[index]).add(BigDecimal.valueOf(decrement)).doubleValue();
+                            if (highPriceCopy[index] < closePriceCopy[index]) {
+                                highPriceCopy[index] = closePriceCopy[index];
+                            }
+
+                            closeIndex += 1;
+//                    Log.d(TAG, "closeIndex: " + closeIndex);
+//                    Log.d(TAG, "lower: " + lower);
+                        }
+
+                        if (highPriceCopy[index] == closePriceCopy[index]) {
+                            //lowPriceCopy[lowPriceCopy.length - 1] += decrement;
+                            highPriceCopy[index] = BigDecimal.valueOf(highPriceCopy[index]).subtract(BigDecimal.valueOf(decrement)).doubleValue();
+                        }
+                        //closePriceCopy[index] += decrement;
+                        closePriceCopy[index] = BigDecimal.valueOf(closePriceCopy[index]).subtract(BigDecimal.valueOf(decrement)).doubleValue();
+
+                        if (closeIndex == 1 && decreIndex == (maxDecrement + 1)) {
+                            isOpenLessLower = true;
+//                                Log.d(TAG, "closeIndex: " + closeIndex);
+//                                Log.d(TAG, "openPrice: " + openPrice[index]);
+//                                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+//                                Log.d(TAG, "lowPrice: " + lowPrice[index]);
+//                                Log.d(TAG, "lower: " + lower);
+                            Log.d(TAG, "openPrice > upper");
+                            //closePriceCopy[index] = lower;
+                            break;
+                        }
+                    }
+
+                    closePriceCopy[index] = roundDouble(closePriceCopy[index], maxDecrement - 1);
+
+                    if (closePrice[index] > closePriceCopy[index] && !isOpenLessLower) {
+                        BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[index]);
+                        BigDecimal nextHighPriceBD = BigDecimal.valueOf(highPrice[index + 1]);
+                        BigDecimal highPriceBD = BigDecimal.valueOf(highPrice[index]);
+                        percentGain = (nextHighPriceBD.subtract(closePriceCopyBD)).divide(closePriceCopyBD, 9, RoundingMode.HALF_DOWN).doubleValue();
+                        cPercentGain = (highPriceBD.subtract(closePriceCopyBD)).divide(closePriceCopyBD, 9, RoundingMode.HALF_DOWN).doubleValue();
+
+                        if (percentGain < minPercentGain){
+                            minPercentGain = percentGain;
+                        }
+
+                        if (cPercentGain < cMinPercentGain){
+                            cMinPercentGain = cPercentGain;
+                        }
+                        Log.d(TAG, "upper: " + upper);
+                        Log.d(TAG, "closePrice[index]: " + closePrice[index]);
+                        Log.d(TAG, "closePriceCopy[index]: " + closePriceCopy[index]);
+                        Log.d(TAG, "highPrice[index]: " + highPrice[index]);
+                        Log.d(TAG, "highPrice[index + 1]: " + highPrice[index + 1]);
+                        Log.d(TAG, "percentGain: " + percentGain);
+                        Log.d(TAG, "cPercentGain: " + cPercentGain);
+
+                    }
+                    Log.d(TAG, "index: " + index);
+                    closePriceCopy[index] = closePrice[index];
+                    highPriceCopy[index] = lowPrice[index];
+                }
+
+
+                Log.d(TAG, "mult: " + mIdx);
+                Log.d(TAG, "lengthIdx: " + lengthIdx);
+//                    Log.d(TAG, "atrIdx: " + atrIdx);
+                Log.d(TAG, "minPercentGain: " + minPercentGain);
+                Log.d(TAG, "cMinPercentGain: " + cMinPercentGain);
+
+            }
+        }
+//        }
+
+
+        // TTM - Revertion to the Mean Band - INPUTS
+//        z = input(0, title = "Offset")
+//        usesl = input(true, title = "RTM against Slope (UCSgears Addition)", type=bool)
+//        length = a == 1 ? 13 : 25
+//        atrlen = a == 1 ? 13 : 25
+//        mult = a == 1 ? 1.5 : 2.5
+//        range =  tr
+//
+//// Calculations
+//        ma = ema(close, length)
+//        rangema = ema(range, atrlen)
+//        upper = ma + rangema * mult
+//        lower = ma - rangema * mult
+//
+//// All Plots
+//        plot(upper, color=purple, title="Upper Channel", offset = z)
+//        plot(ma, color=red, title="Middle Line", offset = z)
+//        plot(lower, color=purple, title="Lower Channel", offset = z)
+    }
+
+    public void calculateLowerEma(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol){
+        double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 1000);
+        double[] lowPriceCopy = Arrays.copyOfRange(lowPrice, 0, 1000);
+        double[] openPriceCopy = Arrays.copyOfRange(openPrice, 0, 1000);
         Log.d(TAG, "closePriceCopy.length: " + closePriceCopy.length);
         double maxPercentGain = 0.0;
+        int maxDecrement = findDecimalPlaces(closePrice);
+        Log.d(TAG, "maxDecrement: " + maxDecrement);
+        int closeIndex;
+        boolean isOpenLessLower;
+
+                    double lower = 0.0;
+                    double decrement = 100.0;
+                    closePriceCopy[closePrice.length - 1] = openPriceCopy[closePrice.length - 1];
+                    lowPriceCopy[closePrice.length - 1] = openPriceCopy[closePrice.length - 1];
+                    closeIndex = 0;
+        double targetPrice1 = 0.0;
+        double targetPrice2 = 0.0;
+        double targetPrice3 = 0.0;
+        double targetPrice4 = 0.0;
+        double targetPrice5 = 0.0;
+        double targetPrice6 = 0.0;
+                    isOpenLessLower = false;
+                    Log.d(TAG, "closePrice: " + closePrice[closePrice.length - 1]);
+                    Log.d(TAG, "openPrice: " + closePrice[openPrice.length - 1]);
+
+                    for (int decreIndex = 0; decreIndex <= (maxDecrement + 1); decreIndex++) {
+                        decrement = BigDecimal.valueOf(decrement).divide(BigDecimal.valueOf(10.0), 10, RoundingMode.HALF_UP).doubleValue();
+                        //Log.d(TAG, "decrement: " + decrement);
+
+
+                        while (closePriceCopy[closePrice.length - 1] > lower) {
+                            int timePeriod = 53;
+//                                int atrRange = atrIdx;
+                            double mult = 0.95;
+
+                            double[] outTREmaArray = new double[closePriceCopy.length];
+                            double[] outMaArray = new double[closePriceCopy.length];
+                            double[] outTrueRangeArray = new double[closePriceCopy.length];
+                            ArrayList<Double> outTREmaArrayList = new ArrayList<>();
+                            ArrayList<Double> outMaArrayList = new ArrayList<>();
+                            ArrayList<Double> outTrueRangeArrayList = new ArrayList<>();
+                            Core core = new Core();
+                            MInteger begin = new MInteger();
+                            MInteger length = new MInteger();
+
+//                                RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, openPrice, lowPriceCopy, closePriceCopy, begin, length, outTrueRangeArray);
+//                                outTrueRangeArrayList = removeZeroInArray(outTrueRangeArray);
+//                                //Log.d(TAG, "outTrueRangeArrayList.size: " + outTrueRangeArrayList.size());
+//                                double[] trueRangeArray = convertArrayListToArray(outTrueRangeArrayList, 1000);
+
+                            RetCode maRetcode = core.ema(0, closePriceCopy.length - 1, closePriceCopy, timePeriod, begin, length, outMaArray);
+                            outMaArrayList = removeZeroInArray(outMaArray);
+                            //Log.d(TAG, "outMaArrayList.size: " + outMaArrayList.size());
+                            double[] maArray = convertArrayListToArray(outMaArrayList, 1000);
+
+//                                RetCode rangeMaRetCode = core.ema(0, trueRangeArray.length - 1, trueRangeArray, atrRange, begin, length, outTREmaArray);
+//                                outTREmaArrayList = removeZeroInArray(outTREmaArray);
+//                                //Log.d(TAG, "outTREmaArrayList.size: " + outTREmaArrayList.size());
+//                                double[] trEmaArray = convertArrayListToArray(outTREmaArrayList, 1000);
+
+//        double upper = maArray[maArray.length - 2] + trEmaArray[trEmaArray.length - 2] * mult;
+//        double lower = maArray[maArray.length - 2] - trEmaArray[trEmaArray.length - 2] * mult;
+                            // double upper = maArray[maArray.length - 1] + trEmaArray[trEmaArray.length - 1] * mult;
+//                                lower = maArray[index] - trEmaArray[index] * mult;
+                            lower = mult * maArray[closePrice.length - 1];
+
+                            //Log.d(TAG, "upper: " + upper);
+//                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+//                Log.d(TAG, "closePrice: " + closePrice[index]);
+//                Log.d(TAG, "lower: " + lower);
+
+                            //closePriceCopy[index] -= decrement;
+                            closePriceCopy[closePrice.length - 1] = BigDecimal.valueOf(closePriceCopy[closePrice.length - 1]).subtract(BigDecimal.valueOf(decrement)).doubleValue();
+                            if (lowPriceCopy[closePrice.length - 1] > closePriceCopy[closePrice.length - 1]) {
+                                lowPriceCopy[closePrice.length - 1] = closePriceCopy[closePrice.length - 1];
+                            }
+
+                            closeIndex += 1;
+//                    Log.d(TAG, "closeIndex: " + closeIndex);
+//                    Log.d(TAG, "lower: " + lower);
+                        }
+
+                        if (lowPriceCopy[closePrice.length - 1] == closePriceCopy[closePrice.length - 1]) {
+                            lowPriceCopy[closePrice.length - 1] = BigDecimal.valueOf(lowPriceCopy[closePrice.length - 1]).add(BigDecimal.valueOf(decrement)).doubleValue();
+                        }
+                        closePriceCopy[closePrice.length - 1] = BigDecimal.valueOf(closePriceCopy[closePrice.length - 1]).add(BigDecimal.valueOf(decrement)).doubleValue();
+
+                        if (closeIndex == 1 && decreIndex == (maxDecrement + 1)) {
+                            Log.d(TAG, "openPrice < lower");
+                            break;
+                        }
+                        Log.d(TAG, "closePriceCopy: " + closePriceCopy[closePrice.length - 1]);
+                        Log.d(TAG, "lower: " + lower);
+                    }
+
+                    //closePriceCopy[index] = BigDecimal.valueOf(closePriceCopy[index]).multiply(BigDecimal.valueOf(PRICE_OFFSET)).doubleValue();
+                    closePriceCopy[closePrice.length - 1] = roundDouble(closePriceCopy[closePrice.length - 1], maxDecrement - 1);
+
+                    if (!isOpenLessLower) {
+                        Log.d(TAG, "lower: " + lower);
+                        Log.d(TAG, "openPrice: " + openPrice[closePrice.length - 1]);
+                        Log.d(TAG, "lowPrice: " + lowPrice[closePrice.length - 1]);
+                        Log.d(TAG, "closePrice: " + closePrice[closePrice.length - 1]);
+                        Log.d(TAG, "closePriceCopy: " + closePriceCopy[closePrice.length - 1]);
+
+                        BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[closePrice.length - 1]);
+                        targetPrice1 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.998))).doubleValue();
+                        targetPrice2 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.996))).doubleValue();
+                        targetPrice3 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.994))).doubleValue();
+                        targetPrice4 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.992))).doubleValue();
+                        targetPrice5 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.990))).doubleValue();
+                        targetPrice6 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.988))).doubleValue();
+                        Log.d(TAG, "targetPrice1: " + targetPrice1);
+                        Log.d(TAG, "targetPrice2: " + targetPrice2);
+                        Log.d(TAG, "targetPrice3: " + targetPrice3);
+                        Log.d(TAG, "targetPrice4: " + targetPrice4);
+                        Log.d(TAG, "targetPrice5: " + targetPrice5);
+                        Log.d(TAG, "targetPrice6: " + targetPrice6);
+
+                    }
+
+                    priceCalculationListener.onSuccess(closePriceCopy[closePrice.length - 1], targetPrice2, targetPrice3, targetPrice4);
+    }
+
+    public void calculateLowerEmaOptimization(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol){
+        double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 1000);
+        double[] lowPriceCopy = Arrays.copyOfRange(lowPrice, 0, 1000);
+        double[] openPriceCopy = Arrays.copyOfRange(openPrice, 0, 1000);
+        Log.d(TAG, "closePriceCopy.length: " + closePriceCopy.length);
+        double maxPercentGain = 0.0;
+        int maxDecrement = findDecimalPlaces(closePrice);
+        Log.d(TAG, "maxDecrement: " + maxDecrement);
+        int closeIndex;
+        boolean isOpenLessLower;
+
+        for (double mIdx = 1.0; mIdx > 0.80; mIdx -= 0.01) {
+            for (int lengthIdx = 2; lengthIdx < 101; lengthIdx++) {
+//                for (int atrIdx = 25; atrIdx < 28; atrIdx++) {
+                double netPercentGain = 0.0;
+                double netTargetGain = 0.0;
+                double maxPercentDrawdown = 0.0;
+                double maxPercentLoss = 0.0;
+                double startingMoney = 5000.0;
+                int negativeGainCounter = 0;
+
+                for (int index = 60; index < 999; index++) {
+                    double lower = 0.0;
+                    double decrement = 100.0;
+                    closePriceCopy[index] = openPriceCopy[index];
+                    lowPriceCopy[index] = openPriceCopy[index];
+                    closeIndex = 0;
+                    int target1Counter = 0;
+                    int target2Counter = 0;
+                    int target3Counter = 0;
+                    int target4Counter = 0;
+                    int target5Counter = 0;
+                    int target6Counter = 0;
+                    isOpenLessLower = false;
+
+                    for (int decreIndex = 0; decreIndex <= (maxDecrement + 1); decreIndex++) {
+                        decrement = BigDecimal.valueOf(decrement).divide(BigDecimal.valueOf(10.0), 10, RoundingMode.HALF_UP).doubleValue();
+                        //Log.d(TAG, "decrement: " + decrement);
+
+
+                        while (closePriceCopy[index] > lower) {
+                            int timePeriod = lengthIdx;
+//                                int atrRange = atrIdx;
+                            double mult = mIdx;
+//                            int timePeriod = 20;
+//                            int atrRange = 15;
+//                            double mult = 2.5;
+//                            int timePeriod = 25;
+//                            int atrRange = 25;
+//                            double mult = 2.5;
+
+                            double[] outTREmaArray = new double[closePriceCopy.length];
+                            double[] outMaArray = new double[closePriceCopy.length];
+                            double[] outTrueRangeArray = new double[closePriceCopy.length];
+                            ArrayList<Double> outTREmaArrayList = new ArrayList<>();
+                            ArrayList<Double> outMaArrayList = new ArrayList<>();
+                            ArrayList<Double> outTrueRangeArrayList = new ArrayList<>();
+                            Core core = new Core();
+                            MInteger begin = new MInteger();
+                            MInteger length = new MInteger();
+
+
+//                                RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, openPrice, lowPriceCopy, closePriceCopy, begin, length, outTrueRangeArray);
+//                                outTrueRangeArrayList = removeZeroInArray(outTrueRangeArray);
+//                                //Log.d(TAG, "outTrueRangeArrayList.size: " + outTrueRangeArrayList.size());
+//                                double[] trueRangeArray = convertArrayListToArray(outTrueRangeArrayList, 1000);
+
+                            RetCode maRetcode = core.ema(0, closePriceCopy.length - 1, closePriceCopy, timePeriod, begin, length, outMaArray);
+                            outMaArrayList = removeZeroInArray(outMaArray);
+                            //Log.d(TAG, "outMaArrayList.size: " + outMaArrayList.size());
+                            double[] maArray = convertArrayListToArray(outMaArrayList, 1000);
+
+//                                RetCode rangeMaRetCode = core.ema(0, trueRangeArray.length - 1, trueRangeArray, atrRange, begin, length, outTREmaArray);
+//                                outTREmaArrayList = removeZeroInArray(outTREmaArray);
+//                                //Log.d(TAG, "outTREmaArrayList.size: " + outTREmaArrayList.size());
+//                                double[] trEmaArray = convertArrayListToArray(outTREmaArrayList, 1000);
+
+//        double upper = maArray[maArray.length - 2] + trEmaArray[trEmaArray.length - 2] * mult;
+//        double lower = maArray[maArray.length - 2] - trEmaArray[trEmaArray.length - 2] * mult;
+                            // double upper = maArray[maArray.length - 1] + trEmaArray[trEmaArray.length - 1] * mult;
+//                                lower = maArray[index] - trEmaArray[index] * mult;
+                            lower = mult * maArray[index];
+
+                            //Log.d(TAG, "upper: " + upper);
+//                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+//                Log.d(TAG, "closePrice: " + closePrice[index]);
+//                Log.d(TAG, "lower: " + lower);
+
+                            //closePriceCopy[index] -= decrement;
+                            closePriceCopy[index] = BigDecimal.valueOf(closePriceCopy[index]).subtract(BigDecimal.valueOf(decrement)).doubleValue();
+                            if (lowPriceCopy[index] > closePriceCopy[index]) {
+                                lowPriceCopy[index] = closePriceCopy[index];
+                            }
+
+                            closeIndex += 1;
+//                    Log.d(TAG, "closeIndex: " + closeIndex);
+//                    Log.d(TAG, "lower: " + lower);
+                        }
+
+                        if (lowPriceCopy[index] == closePriceCopy[index]) {
+                            //lowPriceCopy[lowPriceCopy.length - 1] += decrement;
+                            lowPriceCopy[index] = BigDecimal.valueOf(lowPriceCopy[index]).add(BigDecimal.valueOf(decrement)).doubleValue();
+                        }
+                        //closePriceCopy[index] += decrement;
+                        closePriceCopy[index] = BigDecimal.valueOf(closePriceCopy[index]).add(BigDecimal.valueOf(decrement)).doubleValue();
+
+                        if (closeIndex == 1 && decreIndex == (maxDecrement + 1)) {
+                            //isOpenLessLower = true;
+//                                Log.d(TAG, "closeIndex: " + closeIndex);
+//                                Log.d(TAG, "openPrice: " + openPrice[index]);
+//                                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+//                                Log.d(TAG, "lowPrice: " + lowPrice[index]);
+//                                Log.d(TAG, "lower: " + lower);
+                            Log.d(TAG, "openPrice < lower");
+                            //closePriceCopy[index] = lower;
+                            break;
+                        }
+                    }
+
+                    //closePriceCopy[index] = BigDecimal.valueOf(closePriceCopy[index]).multiply(BigDecimal.valueOf(PRICE_OFFSET)).doubleValue();
+                    closePriceCopy[index] = roundDouble(closePriceCopy[index], maxDecrement - 1);
+
+                    if (lowPrice[index] < closePriceCopy[index] && !isOpenLessLower) {
+                        Log.d(TAG, "lower: " + lower);
+                        Log.d(TAG, "openPrice: " + openPrice[index]);
+                        Log.d(TAG, "lowPrice: " + lowPrice[index]);
+                        Log.d(TAG, "closePrice: " + closePrice[index]);
+                        Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+                        Log.d(TAG, "next openPrice: " + openPrice[index + 1]);
+                        Log.d(TAG, "next highPrice: " + highPrice[index + 1]);
+                        Log.d(TAG, "next closePrice: " + closePrice[index + 1]);
+
+                        BigDecimal highPriceBD = BigDecimal.valueOf(highPrice[index + 1]);
+                        BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[index]);
+                        BigDecimal closePriceBD = BigDecimal.valueOf(closePrice[index]);
+                        double percentGain = (highPriceBD.subtract(closePriceCopyBD)).divide(closePriceCopyBD, 8, RoundingMode.HALF_DOWN).doubleValue();
+                        double targetPrice1 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.998))).doubleValue();
+                        double targetPrice2 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.996))).doubleValue();
+                        double targetPrice3 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.994))).doubleValue();
+                        double targetPrice4 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.992))).doubleValue();
+                        double targetPrice5 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.990))).doubleValue();
+                        double targetPrice6 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.988))).doubleValue();
+                        double sellPrice;
+                        double netCoinQuantity = 0.0;
+                        double currentMoney = startingMoney;
+                        //Log.d(TAG, "targetPrice1: " + targetPrice1);
+
+                        if (percentGain < 0) {
+                            sellPrice = closePrice[index + 1];
+                        } else if (closePrice[index] > closePriceCopy[index]){
+                            sellPrice = closePrice[index];
+                        } else {
+                            sellPrice = closePriceCopy[index];
+                        }
+
+                        if (percentGain < 0) {
+                            if (maxPercentLoss > percentGain){
+                                maxPercentLoss = percentGain;
+                            }
+                            negativeGainCounter += 1;
+                        } else {
+                            BigDecimal targetPrice1BD = BigDecimal.valueOf(targetPrice1);
+                            double tempDrawdown = (targetPrice1BD.subtract(BigDecimal.valueOf(lowPrice[index + 1]))).divide(targetPrice1BD, 9, RoundingMode.HALF_UP).doubleValue();
+                            if (tempDrawdown > maxPercentDrawdown){
+                                maxPercentDrawdown = tempDrawdown;
+                            }
+                        }
+
+                        double target1Percent = 1.0;
+                        double target2Percent = 0.0;
+                        double target3Percent = 0.0;
+                        double target4Percent = 0.0;
+                        double target5Percent = 0.0;
+                        double target6Percent = 0.0;
+
+                        if (targetPrice1 > lowPrice[index]) {
+                            Log.d(TAG, "targetPrice1 greater than low: ");
+                            target1Counter += 1;
+                            netCoinQuantity += (BigDecimal.valueOf(startingMoney).multiply(BigDecimal.valueOf(target1Percent))).divide(BigDecimal.valueOf(targetPrice1), 9, RoundingMode.HALF_DOWN).doubleValue();
+                            currentMoney = BigDecimal.valueOf(currentMoney).subtract((BigDecimal.valueOf(startingMoney).multiply(BigDecimal.valueOf(target1Percent)))).doubleValue();
+                        }
+
+                        if (targetPrice2 > lowPrice[index]) {
+                            Log.d(TAG, "targetPrice2 greater than low: ");
+                            target2Counter += 1;
+                            netCoinQuantity += (BigDecimal.valueOf(startingMoney).multiply(BigDecimal.valueOf(target2Percent))).divide(BigDecimal.valueOf(targetPrice2), 9, RoundingMode.HALF_DOWN).doubleValue();
+                            currentMoney = BigDecimal.valueOf(currentMoney).subtract((BigDecimal.valueOf(startingMoney).multiply(BigDecimal.valueOf(target2Percent)))).doubleValue();
+                        }
+
+                        if (targetPrice3 > lowPrice[index]) {
+                            Log.d(TAG, "targetPrice3 greater than low: ");
+                            target3Counter += 1;
+                            netCoinQuantity += (BigDecimal.valueOf(startingMoney).multiply(BigDecimal.valueOf(target3Percent))).divide(BigDecimal.valueOf(targetPrice3), 9, RoundingMode.HALF_DOWN).doubleValue();
+                            currentMoney = BigDecimal.valueOf(currentMoney).subtract((BigDecimal.valueOf(startingMoney).multiply(BigDecimal.valueOf(target3Percent)))).doubleValue();
+                        }
+
+                        if (targetPrice4 > lowPrice[index]) {
+                            Log.d(TAG, "targetPrice4 greater than low: ");
+                            target4Counter += 1;
+                            netCoinQuantity += (BigDecimal.valueOf(startingMoney).multiply(BigDecimal.valueOf(target4Percent))).divide(BigDecimal.valueOf(targetPrice4), 9, RoundingMode.HALF_DOWN).doubleValue();
+                            currentMoney = BigDecimal.valueOf(currentMoney).subtract((BigDecimal.valueOf(startingMoney).multiply(BigDecimal.valueOf(target4Percent)))).doubleValue();
+                        }
+
+                        if (targetPrice5 > lowPrice[index]) {
+                            Log.d(TAG, "targetPrice5 greater than low: ");
+                            target5Counter += 1;
+                            netCoinQuantity += (BigDecimal.valueOf(startingMoney).multiply(BigDecimal.valueOf(target5Percent))).divide(BigDecimal.valueOf(targetPrice5), 9, RoundingMode.HALF_DOWN).doubleValue();
+                            currentMoney = BigDecimal.valueOf(currentMoney).subtract((BigDecimal.valueOf(startingMoney).multiply(BigDecimal.valueOf(target5Percent)))).doubleValue();
+                        }
+
+                        if (targetPrice6 > lowPrice[index]) {
+                            Log.d(TAG, "targetPrice6 greater than low: ");
+                            target6Counter += 1;
+                            netCoinQuantity += (BigDecimal.valueOf(startingMoney).multiply(BigDecimal.valueOf(target6Percent))).divide(BigDecimal.valueOf(targetPrice6), 9, RoundingMode.HALF_DOWN).doubleValue();
+                            currentMoney = BigDecimal.valueOf(currentMoney).subtract((BigDecimal.valueOf(startingMoney).multiply(BigDecimal.valueOf(target6Percent)))).doubleValue();
+                        }
+
+                        startingMoney = (BigDecimal.valueOf(netCoinQuantity).multiply(BigDecimal.valueOf(sellPrice))).add(BigDecimal.valueOf(currentMoney)).doubleValue();
+                        Log.d(TAG, "percentGain: " + percentGain);
+                        Log.d(TAG, "startingMoney: " + startingMoney);
+                        netPercentGain += percentGain;
+                    }
+                    Log.d(TAG, "index: " + index);
+                    closePriceCopy[index] = closePrice[index];
+                    lowPriceCopy[index] = lowPrice[index];
+                }
+
+                double targetGain = startingMoney/5000;
+                double targetLoss = negativeGainCounter * maxPercentDrawdown;
+                netTargetGain = targetGain - targetLoss;
+                Log.d(TAG, "mult: " + mIdx);
+                Log.d(TAG, "lengthIdx: " + lengthIdx);
+//                    Log.d(TAG, "atrIdx: " + atrIdx);
+                Log.d(TAG, "negativeGainCounter: " + negativeGainCounter);
+                Log.d(TAG, "maxPercentDrawdown: " + maxPercentDrawdown);
+                Log.d(TAG, "netPercentGain: " + netPercentGain);
+                Log.d(TAG, "maxPercentLoss: " + maxPercentLoss);
+                Log.d(TAG, "targetGain: " + targetGain);
+                Log.d(TAG, "targetLoss: " + targetLoss);
+                Log.d(TAG, "netTargetGain: " + netTargetGain);
+                Log.d(TAG, "startingMoney: " + startingMoney);
+                //calculateOffsetReversalBand(highPrice, lowPrice, openPrice, closePrice, volume, maxPercentLoss, lengthIdx, atrIdx);
+                if (maxPercentGain < netTargetGain) {
+                    maxPercentGain = netTargetGain;
+                }
+            }
+        }
+//        }
+
+        Log.d(TAG, "maxPercentGain: " + maxPercentGain);
+
+        // TTM - Revertion to the Mean Band - INPUTS
+//        z = input(0, title = "Offset")
+//        usesl = input(true, title = "RTM against Slope (UCSgears Addition)", type=bool)
+//        length = a == 1 ? 13 : 25
+//        atrlen = a == 1 ? 13 : 25
+//        mult = a == 1 ? 1.5 : 2.5
+//        range =  tr
+//
+//// Calculations
+//        ma = ema(close, length)
+//        rangema = ema(range, atrlen)
+//        upper = ma + rangema * mult
+//        lower = ma - rangema * mult
+//
+//// All Plots
+//        plot(upper, color=purple, title="Upper Channel", offset = z)
+//        plot(ma, color=red, title="Middle Line", offset = z)
+//        plot(lower, color=purple, title="Lower Channel", offset = z)
+    }
+
+    public void calculateReversalBandOptimization(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol){
+        double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 1000);
+        double[] lowPriceCopy = Arrays.copyOfRange(lowPrice, 0, 1000);
+        double[] openPriceCopy = Arrays.copyOfRange(openPrice, 0, 1000);
+        Log.d(TAG, "closePriceCopy.length: " + closePriceCopy.length);
+        double maxPercentGain = 0.0;
+        int maxDecrement = findDecimalPlaces(closePrice);
+        Log.d(TAG, "maxDecrement: " + maxDecrement);
+        int closeIndex;
+        boolean isOpenLessLower;
+
+        for (double mIdx = 0.9; mIdx > 0.0; mIdx -= 0.1) {
+            for (int lengthIdx = 1; lengthIdx < 20; lengthIdx++) {
+//                for (int atrIdx = 25; atrIdx < 28; atrIdx++) {
+                    double netPercentGain = 0.0;
+                    double netTargetGain = 0.0;
+                    double maxPercentDrawdown = 0.0;
+                    double maxPercentLoss = 0.0;
+                    int target1Counter = 0;
+                    int target2Counter = 0;
+                    int target3Counter = 0;
+                    int target4Counter = 0;
+                    int target5Counter = 0;
+                    int target6Counter = 0;
+                    int negativeGainCounter = 0;
+
+                    for (int index = 60; index < 999; index++) {
+                        double lower = 0.0;
+                        double decrement = 100.0;
+                        closePriceCopy[index] = openPriceCopy[index];
+                        lowPriceCopy[index] = openPriceCopy[index];
+                        closeIndex = 0;
+                        isOpenLessLower = false;
+
+                        for (int decreIndex = 0; decreIndex <= (maxDecrement + 1); decreIndex++) {
+                            decrement = BigDecimal.valueOf(decrement).divide(BigDecimal.valueOf(10.0), 10, RoundingMode.HALF_UP).doubleValue();
+                            //Log.d(TAG, "decrement: " + decrement);
+
+
+                            while (closePriceCopy[index] > lower) {
+                                int timePeriod = lengthIdx;
+//                                int atrRange = atrIdx;
+                                double mult = mIdx;
+//                            int timePeriod = 20;
+//                            int atrRange = 15;
+//                            double mult = 2.5;
+//                            int timePeriod = 25;
+//                            int atrRange = 25;
+//                            double mult = 2.5;
+
+                                double[] outTREmaArray = new double[closePriceCopy.length];
+                                double[] outMaArray = new double[closePriceCopy.length];
+                                double[] outTrueRangeArray = new double[closePriceCopy.length];
+                                ArrayList<Double> outTREmaArrayList = new ArrayList<>();
+                                ArrayList<Double> outMaArrayList = new ArrayList<>();
+                                ArrayList<Double> outTrueRangeArrayList = new ArrayList<>();
+                                Core core = new Core();
+                                MInteger begin = new MInteger();
+                                MInteger length = new MInteger();
+
+
+//                                RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, openPrice, lowPriceCopy, closePriceCopy, begin, length, outTrueRangeArray);
+//                                outTrueRangeArrayList = removeZeroInArray(outTrueRangeArray);
+//                                //Log.d(TAG, "outTrueRangeArrayList.size: " + outTrueRangeArrayList.size());
+//                                double[] trueRangeArray = convertArrayListToArray(outTrueRangeArrayList, 1000);
+
+                                RetCode maRetcode = core.ema(0, closePriceCopy.length - 1, closePriceCopy, timePeriod, begin, length, outMaArray);
+                                outMaArrayList = removeZeroInArray(outMaArray);
+                                //Log.d(TAG, "outMaArrayList.size: " + outMaArrayList.size());
+                                double[] maArray = convertArrayListToArray(outMaArrayList, 1000);
+
+//                                RetCode rangeMaRetCode = core.ema(0, trueRangeArray.length - 1, trueRangeArray, atrRange, begin, length, outTREmaArray);
+//                                outTREmaArrayList = removeZeroInArray(outTREmaArray);
+//                                //Log.d(TAG, "outTREmaArrayList.size: " + outTREmaArrayList.size());
+//                                double[] trEmaArray = convertArrayListToArray(outTREmaArrayList, 1000);
+
+//        double upper = maArray[maArray.length - 2] + trEmaArray[trEmaArray.length - 2] * mult;
+//        double lower = maArray[maArray.length - 2] - trEmaArray[trEmaArray.length - 2] * mult;
+                                // double upper = maArray[maArray.length - 1] + trEmaArray[trEmaArray.length - 1] * mult;
+//                                lower = maArray[index] - trEmaArray[index] * mult;
+                                lower = mult * maArray[index];
+
+                                //Log.d(TAG, "upper: " + upper);
+//                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+//                Log.d(TAG, "closePrice: " + closePrice[index]);
+//                Log.d(TAG, "lower: " + lower);
+
+                                //closePriceCopy[index] -= decrement;
+                                closePriceCopy[index] = BigDecimal.valueOf(closePriceCopy[index]).subtract(BigDecimal.valueOf(decrement)).doubleValue();
+                                if (lowPriceCopy[index] > closePriceCopy[index]) {
+                                    lowPriceCopy[index] = closePriceCopy[index];
+                                }
+
+                                closeIndex += 1;
+//                    Log.d(TAG, "closeIndex: " + closeIndex);
+//                    Log.d(TAG, "lower: " + lower);
+                            }
+
+                            if (lowPriceCopy[index] == closePriceCopy[index]) {
+                                //lowPriceCopy[lowPriceCopy.length - 1] += decrement;
+                                lowPriceCopy[index] = BigDecimal.valueOf(lowPriceCopy[index]).add(BigDecimal.valueOf(decrement)).doubleValue();
+                            }
+                            //closePriceCopy[index] += decrement;
+                            closePriceCopy[index] = BigDecimal.valueOf(closePriceCopy[index]).add(BigDecimal.valueOf(decrement)).doubleValue();
+
+                            if (closeIndex == 1 && decreIndex == (maxDecrement + 1)) {
+                                isOpenLessLower = true;
+//                                Log.d(TAG, "closeIndex: " + closeIndex);
+//                                Log.d(TAG, "openPrice: " + openPrice[index]);
+//                                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+//                                Log.d(TAG, "lowPrice: " + lowPrice[index]);
+//                                Log.d(TAG, "lower: " + lower);
+                                Log.d(TAG, "openPrice < lower");
+                                //closePriceCopy[index] = lower;
+                                break;
+                            }
+                        }
+
+                        //closePriceCopy[index] = BigDecimal.valueOf(closePriceCopy[index]).multiply(BigDecimal.valueOf(PRICE_OFFSET)).doubleValue();
+                        closePriceCopy[index] = roundDouble(closePriceCopy[index], maxDecrement - 1);
+
+                        if (lowPrice[index] < closePriceCopy[index] && !isOpenLessLower) {
+                            Log.d(TAG, "lowPrice: " + lowPrice[index]);
+                            Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+                            Log.d(TAG, "next highPrice: " + highPrice[index + 1]);
+                            Log.d(TAG, "next closePrice: " + closePrice[index + 1]);
+
+                            BigDecimal highPriceBD = BigDecimal.valueOf(highPrice[index + 1]);
+                            BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[index]);
+                            double percentGain = (highPriceBD.subtract(closePriceCopyBD)).divide(closePriceCopyBD, 8, RoundingMode.HALF_DOWN).doubleValue();
+                            double targetPrice1 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.998))).doubleValue();
+                            double targetPrice2 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.996))).doubleValue();
+                            double targetPrice3 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.994))).doubleValue();
+                            double targetPrice4 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.992))).doubleValue();
+                            double targetPrice5 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.990))).doubleValue();
+                            double targetPrice6 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.988))).doubleValue();
+                            //Log.d(TAG, "targetPrice1: " + targetPrice1);
+
+                            if (percentGain < 0) {
+                                if (maxPercentLoss > percentGain){
+                                    maxPercentLoss = percentGain;
+                                }
+                                negativeGainCounter += 1;
+                            } else {
+                                BigDecimal targetPrice1BD = BigDecimal.valueOf(targetPrice1);
+                                double tempDrawdown = (targetPrice1BD.subtract(BigDecimal.valueOf(lowPrice[index + 1]))).divide(targetPrice1BD, 9, RoundingMode.HALF_UP).doubleValue();
+                                if (tempDrawdown > maxPercentDrawdown){
+                                    maxPercentDrawdown = tempDrawdown;
+                                }
+                            }
+
+                            if (targetPrice1 > lowPrice[index] && percentGain > 0) {
+                                Log.d(TAG, "targetPrice1 greater than low: ");
+                                target1Counter += 1;
+                            }
+
+                            if (targetPrice2 > lowPrice[index] && percentGain > 0) {
+                                Log.d(TAG, "targetPrice2 greater than low: ");
+                                target2Counter += 1;
+                            }
+
+                            if (targetPrice3 > lowPrice[index] && percentGain > 0) {
+                                Log.d(TAG, "targetPrice3 greater than low: ");
+                                target3Counter += 1;
+                            }
+
+                            if (targetPrice4 > lowPrice[index] && percentGain > 0) {
+                                Log.d(TAG, "targetPrice4 greater than low: ");
+                                target4Counter += 1;
+                            }
+
+                            if (targetPrice5 > lowPrice[index] && percentGain > 0) {
+                                Log.d(TAG, "targetPrice5 greater than low: ");
+                                target5Counter += 1;
+                            }
+
+                            if (targetPrice6 > lowPrice[index] && percentGain > 0) {
+                                Log.d(TAG, "targetPrice6 greater than low: ");
+                                target6Counter += 1;
+                            }
+
+                            Log.d(TAG, "percentGain: " + percentGain);
+                            netPercentGain += percentGain;
+                        }
+                        Log.d(TAG, "index: " + index);
+                        closePriceCopy[index] = closePrice[index];
+                        lowPriceCopy[index] = lowPrice[index];
+                    }
+
+                    double targetGain = target1Counter * 0.0005 + target2Counter * 0.0025 + target3Counter * 0.0045 + target4Counter * 0.0065 + target5Counter * 0.0085 + target6Counter * 0.0105;
+                    double targetLoss = negativeGainCounter * maxPercentDrawdown;
+                    netTargetGain = targetGain - targetLoss;
+                                        Log.d(TAG, "mult: " + mIdx);
+                    Log.d(TAG, "lengthIdx: " + lengthIdx);
+//                    Log.d(TAG, "atrIdx: " + atrIdx);
+
+                    Log.d(TAG, "negativeGainCounter: " + negativeGainCounter);
+                    Log.d(TAG, "maxPercentDrawdown: " + maxPercentDrawdown);
+                    Log.d(TAG, "netPercentGain: " + netPercentGain);
+                    Log.d(TAG, "maxPercentLoss: " + maxPercentLoss);
+                    Log.d(TAG, "targetGain: " + targetGain);
+                    Log.d(TAG, "targetLoss: " + targetLoss);
+                    Log.d(TAG, "netTargetGain: " + netTargetGain);
+                    //calculateOffsetReversalBand(highPrice, lowPrice, openPrice, closePrice, volume, maxPercentLoss, lengthIdx, atrIdx);
+                    if (maxPercentGain < netTargetGain) {
+                        maxPercentGain = netTargetGain;
+                    }
+                }
+            }
+//        }
+
+        Log.d(TAG, "maxPercentGain: " + maxPercentGain);
+
+        // TTM - Revertion to the Mean Band - INPUTS
+//        z = input(0, title = "Offset")
+//        usesl = input(true, title = "RTM against Slope (UCSgears Addition)", type=bool)
+//        length = a == 1 ? 13 : 25
+//        atrlen = a == 1 ? 13 : 25
+//        mult = a == 1 ? 1.5 : 2.5
+//        range =  tr
+//
+//// Calculations
+//        ma = ema(close, length)
+//        rangema = ema(range, atrlen)
+//        upper = ma + rangema * mult
+//        lower = ma - rangema * mult
+//
+//// All Plots
+//        plot(upper, color=purple, title="Upper Channel", offset = z)
+//        plot(ma, color=red, title="Middle Line", offset = z)
+//        plot(lower, color=purple, title="Lower Channel", offset = z)
+    }
+
+    private void calculateOffsetReversalBand(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, double offset, int lengthIdx, int atrIdx){
+        double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 1000);
+        double[] lowPriceCopy = Arrays.copyOfRange(lowPrice, 0, 1000);
+        double[] openPriceCopy = Arrays.copyOfRange(openPrice, 0, 1000);
+        Log.d(TAG, "closePriceCopy.length: " + closePriceCopy.length);
+        double maxPercentGain = 0.0;
+        int maxDecrement = findDecimalPlaces(closePrice);
+        Log.d(TAG, "maxDecrement: " + maxDecrement);
+        int closeIndex;
+        boolean isOpenLessLower;
 
 //        for (double mIdx = 2.0; mIdx < 3.1; mIdx += 0.1) {
-            double netPercentGain = 0.0;
+//            for (int lengthIdx = 15; lengthIdx < 21; lengthIdx++) {
+//                for (int atrIdx = 7; atrIdx < 21; atrIdx++) {
+        double netPercentGain = 0.0;
+        double netTargetGain = 0.0;
+        double maxPercentDrawdown = 0.0;
+        double maxPercentLoss = 0.0;
+        int target1Counter = 0;
+        int target2Counter = 0;
+        int target3Counter = 0;
+        int target4Counter = 0;
+        int target5Counter = 0;
+        int target6Counter = 0;
+        int negativeGainCounter = 0;
 
-            for (int index = 30; index < 999; index++) {
-                double lower = 0.0;
+        for (int index = 60; index < 999; index++) {
+            double lower = 0.0;
+            double decrement = 100.0;
+            closePriceCopy[index] = openPriceCopy[index];
+            lowPriceCopy[index] = openPriceCopy[index];
+            closeIndex = 0;
+            isOpenLessLower = false;
+
+            for (int decreIndex = 0; decreIndex <= (maxDecrement + 1); decreIndex++) {
+                decrement = BigDecimal.valueOf(decrement).divide(BigDecimal.valueOf(10.0), 10, RoundingMode.HALF_UP).doubleValue();
+                //Log.d(TAG, "decrement: " + decrement);
+
 
                 while (closePriceCopy[index] > lower) {
-                    int timePeriod = 25;
-                    int atrRange = 25;
+                                int timePeriod = lengthIdx;
+                                int atrRange = atrIdx;
+//                                double mult = mIdx;
+//                    int timePeriod = 20;
+//                    int atrRange = 15;
+//                            double mult = 2.5;
+//                            int timePeriod = 25;
+//                            int atrRange = 25;
                     double mult = 2.5;
-//                    int timePeriod = period;
-//                    int atrRange = period;
-//                    double mult = mIdx;
+
                     double[] outTREmaArray = new double[closePriceCopy.length];
                     double[] outMaArray = new double[closePriceCopy.length];
                     double[] outTrueRangeArray = new double[closePriceCopy.length];
@@ -717,7 +1594,8 @@ public class AdxDmModel {
                     MInteger begin = new MInteger();
                     MInteger length = new MInteger();
 
-                    RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, highPrice, lowPrice, closePriceCopy, begin, length, outTrueRangeArray);
+
+                    RetCode trueRangeRetCode = core.trueRange(0, closePriceCopy.length - 1, openPrice, lowPriceCopy, closePriceCopy, begin, length, outTrueRangeArray);
                     outTrueRangeArrayList = removeZeroInArray(outTrueRangeArray);
                     //Log.d(TAG, "outTrueRangeArrayList.size: " + outTrueRangeArrayList.size());
                     double[] trueRangeArray = convertArrayListToArray(outTrueRangeArrayList, 1000);
@@ -740,61 +1618,141 @@ public class AdxDmModel {
 //                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
 //                Log.d(TAG, "closePrice: " + closePrice[index]);
 //                Log.d(TAG, "lower: " + lower);
-                    closePriceCopy[index] -= 0.1;
+
+                    //closePriceCopy[index] -= decrement;
+                    closePriceCopy[index] = BigDecimal.valueOf(closePriceCopy[index]).subtract(BigDecimal.valueOf(decrement)).doubleValue();
+                    if (lowPriceCopy[index] > closePriceCopy[index]) {
+                        lowPriceCopy[index] = closePriceCopy[index];
+                    }
+
+                    closeIndex += 1;
+//                    Log.d(TAG, "closeIndex: " + closeIndex);
+//                    Log.d(TAG, "lower: " + lower);
+
                 }
-                closePriceCopy[index] += 0.1;
 
-                if (lowPrice[index] < closePriceCopy[index]) {
-                    Log.d(TAG, "lowPrice: " + lowPrice[index]);
-                    Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
-                    Log.d(TAG, "next highPrice: " + highPrice[index + 1]);
-
-                    BigDecimal highPriceBD = BigDecimal.valueOf(highPrice[index + 1]);
-                    BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[index]);
-                    double percentGain = (highPriceBD.subtract(closePriceCopyBD)).divide(closePriceCopyBD, 8, RoundingMode.HALF_DOWN).doubleValue();
-
-                    Log.d(TAG, "percentGain: " + percentGain);
-                    netPercentGain += percentGain;
+                if (lowPriceCopy[index] == closePriceCopy[index]) {
+                    //lowPriceCopy[lowPriceCopy.length - 1] += decrement;
+                    lowPriceCopy[index] = BigDecimal.valueOf(lowPriceCopy[index]).add(BigDecimal.valueOf(decrement)).doubleValue();
                 }
-                Log.d(TAG, "index: " + index);
-                closePriceCopy[index] = closePrice[index];
+                //closePriceCopy[index] += decrement;
+                closePriceCopy[index] = BigDecimal.valueOf(closePriceCopy[index]).add(BigDecimal.valueOf(decrement)).doubleValue();
+
+                if (closeIndex == 1 && decreIndex == (maxDecrement + 1)) {
+                    isOpenLessLower = true;
+//                                Log.d(TAG, "closeIndex: " + closeIndex);
+//                                Log.d(TAG, "openPrice: " + openPrice[index]);
+//                                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+//                                Log.d(TAG, "lowPrice: " + lowPrice[index]);
+//                                Log.d(TAG, "lower: " + lower);
+                    Log.d(TAG, "openPrice < lower");
+                    //closePriceCopy[index] = lower;
+                    break;
+                }
             }
 
-            //Log.d(TAG, "period: " + period);
-//            Log.d(TAG, "mult: " + mIdx);
-            Log.d(TAG, "netPercentGain: " + netPercentGain);
-            if (maxPercentGain < netPercentGain){
-                maxPercentGain = netPercentGain;
+            closePriceCopy[index] = BigDecimal.valueOf(closePriceCopy[index]).multiply(BigDecimal.valueOf(1+offset)).doubleValue();
+            closePriceCopy[index] = roundDouble(closePriceCopy[index], maxDecrement - 1);
+
+            if (lowPrice[index] < closePriceCopy[index] && !isOpenLessLower) {
+                Log.d(TAG, "lowPrice: " + lowPrice[index]);
+                Log.d(TAG, "closePriceCopy: " + closePriceCopy[index]);
+                Log.d(TAG, "next highPrice: " + highPrice[index + 1]);
+                Log.d(TAG, "next closePrice: " + closePrice[index + 1]);
+
+                BigDecimal highPriceBD = BigDecimal.valueOf(highPrice[index + 1]);
+                BigDecimal closePriceCopyBD = BigDecimal.valueOf(closePriceCopy[index]);
+                double percentGain = (highPriceBD.subtract(closePriceCopyBD)).divide(closePriceCopyBD, 8, RoundingMode.HALF_DOWN).doubleValue();
+                double targetPrice1 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.998))).doubleValue();
+                double targetPrice2 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.996))).doubleValue();
+                double targetPrice3 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.994))).doubleValue();
+                double targetPrice4 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.992))).doubleValue();
+                double targetPrice5 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.990))).doubleValue();
+                double targetPrice6 = (closePriceCopyBD.multiply(BigDecimal.valueOf(0.988))).doubleValue();
+                //Log.d(TAG, "targetPrice1: " + targetPrice1);
+
+                if (percentGain < 0) {
+                    if (maxPercentLoss > percentGain){
+                        maxPercentLoss = percentGain;
+                    }
+                    negativeGainCounter += 1;
+                } else {
+                    BigDecimal targetPrice1BD = BigDecimal.valueOf(targetPrice1);
+                    double tempDrawdown = (targetPrice1BD.subtract(BigDecimal.valueOf(lowPrice[index + 1]))).divide(targetPrice1BD, 9, RoundingMode.HALF_UP).doubleValue();
+                    if (tempDrawdown > maxPercentDrawdown){
+                        maxPercentDrawdown = tempDrawdown;
+                    }
+                }
+
+                if (targetPrice1 > lowPrice[index] && percentGain > 0) {
+                    Log.d(TAG, "targetPrice1 greater than low: ");
+                    target1Counter += 1;
+                }
+
+                if (targetPrice2 > lowPrice[index] && percentGain > 0) {
+                    Log.d(TAG, "targetPrice2 greater than low: ");
+                    target2Counter += 1;
+                }
+
+                if (targetPrice3 > lowPrice[index] && percentGain > 0) {
+                    Log.d(TAG, "targetPrice3 greater than low: ");
+                    target3Counter += 1;
+                }
+
+                if (targetPrice4 > lowPrice[index] && percentGain > 0) {
+                    Log.d(TAG, "targetPrice4 greater than low: ");
+                    target4Counter += 1;
+                }
+
+                if (targetPrice5 > lowPrice[index] && percentGain > 0) {
+                    Log.d(TAG, "targetPrice5 greater than low: ");
+                    target5Counter += 1;
+                }
+
+                if (targetPrice6 > lowPrice[index] && percentGain > 0) {
+                    Log.d(TAG, "targetPrice6 greater than low: ");
+                    target6Counter += 1;
+                }
+
+                Log.d(TAG, "percentGain: " + percentGain);
+                netPercentGain += percentGain;
             }
-//        }
+            Log.d(TAG, "index: " + index);
+            closePriceCopy[index] = closePrice[index];
+            lowPriceCopy[index] = lowPrice[index];
+        }
 
-        Log.d(TAG, "maxPercentGain: " + maxPercentGain);
+        double targetGain = target1Counter * 0.0005 + target2Counter * 0.0025 + target3Counter * 0.0045 + target4Counter * 0.0065 + target5Counter * 0.0085 + target6Counter * 0.0105;
+        double targetLoss = negativeGainCounter * maxPercentDrawdown;
+        netTargetGain = targetGain - targetLoss;
+        //                    Log.d(TAG, "mult: " + mIdx);
+//                    Log.d(TAG, "lengthIdx: " + lengthIdx);
+//                    Log.d(TAG, "atrIdx: " + atrIdx);
 
-//        for (double tr : outTrueRangeArray){
-//            Log.d(TAG, "tr: " + tr);
-//        }
-//        RetCode rangeMaRetCode = core.ema(0, )
+        Log.d(TAG, "negativeGainCounter: " + negativeGainCounter);
+        Log.d(TAG, "maxPercentDrawdown: " + maxPercentDrawdown);
+        Log.d(TAG, "netPercentGain: " + netPercentGain);
+        Log.d(TAG, "maxPercentLoss: " + maxPercentLoss);
+        Log.d(TAG, "targetOffsetGain: " + targetGain);
+        Log.d(TAG, "targetLoss: " + targetLoss);
+        Log.d(TAG, "netTargetOffsetGain: " + netTargetGain);
+    }
 
+    private int findDecimalPlaces(double[] closePrice){
+        int maxDecimalPlace = 0;
+        double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 100);
 
-        // TTM - Revertion to the Mean Band - INPUTS
-//        z = input(0, title = "Offset")
-//        usesl = input(true, title = "RTM against Slope (UCSgears Addition)", type=bool)
-//        length = a == 1 ? 13 : 25
-//        atrlen = a == 1 ? 13 : 25
-//        mult = a == 1 ? 1.5 : 2.5
-//        range =  tr
-//
-//// Calculations
-//        ma = ema(close, length)
-//        rangema = ema(range, atrlen)
-//        upper = ma + rangema * mult
-//        lower = ma - rangema * mult
-//
-//// All Plots
-//        plot(upper, color=purple, title="Upper Channel", offset = z)
-//        plot(ma, color=red, title="Middle Line", offset = z)
-//        plot(lower, color=purple, title="Lower Channel", offset = z)
+        for (double price : closePriceCopy){
+            String text = Double.toString(Math.abs(price));
+            int integerPlaces = text.indexOf('.');
+            int decimalPlace = text.length() - integerPlaces;
 
+            if (maxDecimalPlace < decimalPlace){
+                maxDecimalPlace = decimalPlace;
+            }
+        }
+
+        return maxDecimalPlace;
     }
 
     public void calculateStochiastic(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
@@ -1208,6 +2166,65 @@ public class AdxDmModel {
 
 //        adxListener.onSuccess("");
 
+    }
+
+    public void calculateAdxDiTest(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol) {
+        double[] adxOutArray = new double[closePrice.length];
+        double[] minusDiOutArray = new double[closePrice.length];
+        double[] plusDiOutArray = new double[closePrice.length];
+        double maxDiDiff = 0.0;
+        ArrayList<Double> adxOutArrayList = new ArrayList<>();
+        ArrayList<Double> minusDiOutArrayList = new ArrayList<>();
+        ArrayList<Double> plusDiOutArrayList = new ArrayList<>();
+
+
+
+        for (int lengthIdx = 3; lengthIdx < 30; lengthIdx++) {
+            MInteger begin = new MInteger();
+            MInteger length = new MInteger();
+            Core c = new Core();
+//            Log.d(TAG, "symbol" + symbol);
+            RetCode adxRetCode = c.adx(0, closePrice.length - 1, highPrice, lowPrice, closePrice, lengthIdx, begin, length, adxOutArray);
+            RetCode minusDIRetCode = c.minusDI(0, closePrice.length - 1, highPrice, lowPrice, closePrice, lengthIdx, begin, length, minusDiOutArray);
+            RetCode plusDIRetCode = c.plusDI(0, closePrice.length - 1, highPrice, lowPrice, closePrice, lengthIdx, begin, length, plusDiOutArray);
+            adxOutArrayList = removeZeroInArray(adxOutArray);
+            minusDiOutArrayList = removeZeroInArray(minusDiOutArray);
+            double[] minusDiArray = convertArrayListToArray(minusDiOutArrayList, 1000);
+            plusDiOutArrayList = removeZeroInArray(plusDiOutArray);
+            double[] plusDiArray = convertArrayListToArray(plusDiOutArrayList, 1000);
+            boolean isPlusIntersect = false;
+
+            if (minusDIRetCode == RetCode.Success && plusDIRetCode == RetCode.Success && adxRetCode == RetCode.Success) {
+                double minPercentGain = 1.0;
+                for (int index = 1; index < 999; index++) {
+                    double mDi = minusDiArray[index];
+                    double pDi = plusDiArray[index];
+                    if (pDi > mDi && plusDiArray[index - 1] < minusDiArray[index - 1]) {
+                        isPlusIntersect = true;
+                    } else {
+                        isPlusIntersect = false;
+                    }
+
+                    if (isPlusIntersect) {
+                        Log.d(TAG, "lengthIdx: " + lengthIdx);
+                        Log.d(TAG, "index: " + index);
+                        Log.d(TAG, "closePrice: " + closePrice[index]);
+                        Log.d(TAG, "highPrice + 1: " + highPrice[index + 1]);
+                        Log.d(TAG, "highPrice + 2: " + highPrice[index + 2]);
+                        Log.d(TAG, "index + 1 is p>m: " + (plusDiArray[index + 1] > minusDiArray[index + 1]));
+                        Log.d(TAG, "index + 2 is p>m: " + (plusDiArray[index + 2] > minusDiArray[index + 2]));
+
+                        double percentGain = (highPrice[index + 1] - closePrice[index]) / closePrice[index];
+                        if (percentGain < minPercentGain) {
+                            minPercentGain = percentGain;
+                        }
+                        Log.d(TAG, "percentGain: " + percentGain);
+
+                    }
+                }
+                Log.d(TAG, "minPercentGain: " + minPercentGain);
+            }
+        }
     }
 
     public void calculateAdxDi(double[] highPrice, double[] lowPrice, double[] closePrice, double[] volume, AdxListener adxListener, String symbol) {

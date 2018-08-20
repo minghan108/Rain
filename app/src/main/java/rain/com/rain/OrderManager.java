@@ -108,6 +108,7 @@ public class OrderManager {
     }
 
     private void handleBuyOrderResponseFromServer(String response, BuyOrderListener buyOrderListener) {
+        Log.d(TAG, "buyOrderResponse: " + response);
         Log.d(TAG, "handleBuyOrderResponseFromServer");
     }
 
