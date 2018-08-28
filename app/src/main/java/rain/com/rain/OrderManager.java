@@ -108,8 +108,7 @@ public class OrderManager {
     }
 
     private void handleBuyOrderResponseFromServer(String response, BuyOrderListener buyOrderListener) {
-        Log.d(TAG, "buyOrderResponse: " + response);
-        Log.d(TAG, "handleBuyOrderResponseFromServer");
+        buyOrderListener.onSuccess();
     }
 
     private void handleOnFailure(String response, BuyOrderListener buyOrderListener){
@@ -189,7 +188,7 @@ public class OrderManager {
 
     private void handleCheckOpenOrderResponseFromServer(String response, OpenOrderListener openOrderListener){
         Log.d(TAG, "handleCheckOpenOrderResponseFromServer");
-        openOrderListener.onSuccess(parser.parseCheckOpenOrderResponse(response, openOrderListener));
+        parser.parseCheckOpenOrderResponse(response, openOrderListener);
 
     }
 

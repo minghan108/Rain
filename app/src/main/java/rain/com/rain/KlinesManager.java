@@ -10,8 +10,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
+import static rain.com.rain.MainActivity.currentTS;
 import static rain.com.rain.MainActivity.localToGMTOffset;
 import static rain.com.rain.MainActivity.limit;
+import static rain.com.rain.MainActivity.midnightUTCTS;
 
 
 /**
@@ -158,7 +160,7 @@ public class KlinesManager {
     private String getGetDefaultKlinesUrl(String symbol) {
 //        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=105";
 //        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=50";
-        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=30m&limit=" + limit;
+        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=5m&startTime=" + midnightUTCTS + "&endTime=" + currentTS;
 
     }
 
@@ -196,5 +198,52 @@ public class KlinesManager {
 
         symbols = parser.parseSymbolsJsonResponse(response);
         symbolsListener.onSuccess(symbols);
+    }
+
+    public void sendHistoricalTradeRequest(final HistTradeListener histTradeListener, final String symbol, final Long requestId) {
+        SafeThread sendGetAllPlayableContentRequestThread = new SafeThread("sendGetAllPlayableContentRequestThread") {
+            @Override
+            protected void runSafe() {
+                HistTradeListener listener = histTradeListener;
+                final Semaphore sem = new Semaphore();
+                sem.sem_open();
+                OnOkhttpProcessFinish httpListener = new OnOkhttpProcessFinish() {
+                    @Override
+                    public void onHttpEvent(String response) {
+                        Log.d(TAG, "sendGetAllPlayableContentRequest onSuccess");
+                        handleGetHistTradeResponseFromServer(response, histTradeListener, symbol);
+                        sem.sem_post();
+                    }
+
+                    @Override
+                    public void onHttpFailure(String response) {
+                        Log.d(TAG, "sendGetAllPlayableContentRequest onFailure");
+                        handleOnFailure(response, histTradeListener);
+                        sem.sem_post();
+                    }
+                };
+                (new OkHttpConnection()).getResponse(getGetHistTradeQueryStr(symbol, requestId), httpListener, "X-MBX-APIKEY", "GET");
+                sem.sem_wait();
+            }
+        };
+
+        sendGetAllPlayableContentRequestThread.start();
+    }
+
+    private String getGetHistTradeQueryStr(String symbol, Long requestId) {
+        if (requestId.equals(0L)) {
+            return "https://api.binance.com/api/v1/aggTrades?symbol=" + symbol + "&limit=1000";
+        } else {
+            return "https://api.binance.com/api/v1/aggTrades?symbol=" + symbol + "&fromId=" + requestId + "&limit=1000";
+        }
+    }
+
+    private void handleGetHistTradeResponseFromServer(String response, HistTradeListener histTradeListener, String symbol) {
+        parser.parseHistTradeJsonResponse(response, histTradeListener);
+    }
+
+    public void handleOnFailure(String response, HistTradeListener histTradeListener) {
+        Log.d(TAG, "handleOnFailure" + response);
+        histTradeListener.onFailure(response);
     }
 }

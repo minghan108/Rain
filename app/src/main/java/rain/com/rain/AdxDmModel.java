@@ -7,6 +7,7 @@ import com.tictactec.ta.lib.MAType;
 import com.tictactec.ta.lib.MInteger;
 import com.tictactec.ta.lib.RetCode;
 
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
@@ -29,13 +30,15 @@ import static rain.com.rain.MainActivity.pumpHashMap;
 import static rain.com.rain.MainActivity.sellRemainderState;
 import static rain.com.rain.MainActivity.startMoney;
 import static rain.com.rain.MainActivity.symbolBreakoutMap;
-import static rain.com.rain.MainActivity.symbolBuyPriceDecHashMap;
 
 public class AdxDmModel {
     private String TAG = "AdxDmModel ";
     private boolean isFirstLaunch = true;
     private ArrayList<String> targetSymbolList = new ArrayList<>();
     private final double PRICE_OFFSET = 0.98475454;
+    private double maxPrice;
+    private double minPrice;
+
 
 
     public void calculatePumpPercent(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, SmaListener smaListener, String symbol){
@@ -905,6 +908,121 @@ public class AdxDmModel {
 //        plot(lower, color=purple, title="Lower Channel", offset = z)
     }
 
+//    public void monitorCurrentPrice(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol){
+//        int maxDecrement = (findDecimalPlaces(closePrice) - 1);
+//        priceCalculationListener.onSuccess(closePrice.length - 1, maxDecrement);
+//    }
+
+    public void calculateRange(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol){
+        maxPrice = findMax(highPrice);
+        minPrice = findMin(lowPrice);
+
+        priceCalculationListener.onSuccess(maxPrice, minPrice);
+    }
+
+//    public void calculateVolumeProfile(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol) {
+    public void calculateVolumeProfile(ArrayList<Long> timestampArrayList, ArrayList<Double> volumeArrayList, ArrayList<Double> priceArrayList, ArrayList<Long> idArrayList) {
+        HashMap<Double, Double> volumePriceHM = new HashMap<>();
+        ArrayList<Double> keySetArrayList = new ArrayList<>();
+        int volumeIndex = 0;
+        double poc = 0.0;
+        double pocPrice = 0.0;
+        int pocKey = 0;
+
+        Core core = new Core();
+        MInteger begin = new MInteger();
+        MInteger length = new MInteger();
+
+        double intervalPrice = minPrice;
+        BigDecimal minPriceBD = BigDecimal.valueOf(minPrice);
+
+        keySetArrayList.add(minPrice);
+
+        BigDecimal intervalBD = (BigDecimal.valueOf(maxPrice).subtract(BigDecimal.valueOf(minPrice))).divide(BigDecimal.valueOf(240), 9, RoundingMode.HALF_UP);
+        Log.d(TAG, "interval: " + intervalBD.doubleValue());
+        Log.d(TAG, "minPrice: " + minPrice);
+        Log.d(TAG, "maxPrice: " + maxPrice);
+
+        for (int i = 0; i < 240; i++){
+            intervalPrice = BigDecimal.valueOf(intervalPrice).add(intervalBD).doubleValue();
+            keySetArrayList.add(intervalPrice);
+            volumePriceHM.put(intervalPrice, 0.0);
+        }
+        Log.d(TAG, "volumeArrayList.size(): " + volumeArrayList.size());
+        Log.d(TAG, "timestampArrayList.size(): " + timestampArrayList.size());
+        Log.d(TAG, "priceArrayList.size(): " + priceArrayList.size());
+        Log.d(TAG, "idArrayList.size(): " + idArrayList.size());
+        Log.d(TAG, "volumePriceHM created");
+
+        for (Double price : priceArrayList) {
+            if (price.equals(null)){
+                break;
+            }
+            BigDecimal priceBD = BigDecimal.valueOf(price);
+            double index = (priceBD.subtract(minPriceBD)).divide(intervalBD, 0, RoundingMode.UP).doubleValue();
+            Log.d(TAG, "price: " + price);
+            Log.d(TAG, "index: " + index);
+            Log.d(TAG, "keyPrice: " + keySetArrayList.get((int)index));
+
+            for (int k = (int)index; k < 241; k++) {
+                Log.d(TAG, "k: " + k);
+                //if (inRange(keySetArrayList.get(k), keySetArrayList.get(k - 1), price)){
+                if (price < keySetArrayList.get(k) && price >= keySetArrayList.get(k - 1)){
+                    BigDecimal prevVolumeBD = BigDecimal.valueOf(volumePriceHM.get(keySetArrayList.get(k)));
+                    double curVolume = prevVolumeBD.add(BigDecimal.valueOf(volumeArrayList.get(volumeIndex))).doubleValue();
+                    volumePriceHM.put(keySetArrayList.get(k), curVolume);
+
+                    if (poc < curVolume){
+                        pocKey = k;
+                        poc = curVolume;
+                    }
+                    break;
+                }
+            }
+            Log.d(TAG, "POC: " + poc);
+            Log.d(TAG, "volumeIndex: " + volumeIndex);
+            volumeIndex++;
+        }
+
+        pocPrice = keySetArrayList.get(pocKey);
+        Log.d(TAG, "Final POC: " + poc);
+        Log.d(TAG, "pocPrice: " + pocPrice);
+        Log.d(TAG, "pocPriceVolume: " + volumePriceHM.get(pocPrice));
+
+
+    }
+
+    private boolean inRange(double high, double low, double x){
+        BigDecimal xBD = BigDecimal.valueOf(x);
+        BigDecimal highBD = BigDecimal.valueOf(high);
+        BigDecimal lowBD = BigDecimal.valueOf(low);
+        return  ((xBD.subtract(lowBD).doubleValue()) < (highBD.subtract(lowBD).doubleValue()) && (xBD.subtract(lowBD).doubleValue()) >= 0);
+    }
+
+    private double findMin(double[] array){
+        double min = array[0];
+
+        for(double element : array){
+            if (min > element){
+                min = element;
+            }
+        }
+
+        return min;
+    }
+
+    private double findMax(double[] array){
+        double max = array[0];
+
+        for(double element : array){
+            if (max < element){
+                max = element;
+            }
+        }
+
+        return max;
+    }
+
     public void calculateLowerEma(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol){
         double[] closePriceCopy = Arrays.copyOfRange(closePrice, 0, 1000);
         double[] lowPriceCopy = Arrays.copyOfRange(lowPrice, 0, 1000);
@@ -916,11 +1034,11 @@ public class AdxDmModel {
         int closeIndex;
         boolean isOpenLessLower;
 
-                    double lower = 0.0;
-                    double decrement = 100.0;
-                    closePriceCopy[closePrice.length - 1] = openPriceCopy[closePrice.length - 1];
-                    lowPriceCopy[closePrice.length - 1] = openPriceCopy[closePrice.length - 1];
-                    closeIndex = 0;
+        double lower = 0.0;
+        double decrement = 100.0;
+        closePriceCopy[closePrice.length - 1] = openPriceCopy[closePrice.length - 1];
+        lowPriceCopy[closePrice.length - 1] = openPriceCopy[closePrice.length - 1];
+        closeIndex = 0;
         double targetPrice1 = 0.0;
         double targetPrice2 = 0.0;
         double targetPrice3 = 0.0;
@@ -1027,7 +1145,7 @@ public class AdxDmModel {
 
                     }
 
-                    priceCalculationListener.onSuccess(closePriceCopy[closePrice.length - 1], targetPrice2, targetPrice3, targetPrice4);
+                    //priceCalculationListener.onSuccess(closePriceCopy[closePrice.length - 1], targetPrice2, targetPrice3, targetPrice4);
     }
 
     public void calculateLowerEmaOptimization(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol){

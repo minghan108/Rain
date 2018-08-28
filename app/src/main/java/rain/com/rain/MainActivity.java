@@ -8,27 +8,23 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
-import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
@@ -48,10 +44,14 @@ public class MainActivity extends AppCompatActivity {
     private double buyPrice = 0.0;
     private double sellPrice = 0.0;
     private String secretKey = "Eqr4AvEAPufgZ8fD97ciJQjzNp7KMScUBAjqXDoc0IAaMTrUks3lTXGQVbuEEfzi";
-    private double buyQuantity = 0.0;
-    private double usdtCoin = 0.0;
+    private double sellQuantity = 0.0;
+    private double sellCoinQuantity = 0.0;
     private int cancelBuyOrderIdListLength = 0;
     private int cancelBuyOrderOnSuccessCount = 0;
+    private int cancelSellOrderIdListLength = 0;
+    private int cancelOrderIdListLength = 0;
+    private int cancelSellOrderOnSuccessCount = 0;
+    private int cancelBuySellOrderOnSuccessCount = 0;
     private double buyOrderTier1 = 0.0;
     private double buyOrderTier2 = 0.0;
     private double buyOrderTier3 = 0.0;
@@ -60,10 +60,31 @@ public class MainActivity extends AppCompatActivity {
     private List<Double> buyOrderTierList = new ArrayList<>();
     private List<Double> buyOrderQuantityPercentList = new ArrayList<>();
     private NotificationManager notifManager;
+    private double takeProfitPrice = 2.350;
+    private double stopLossPrice = 0.0;
+    private double currentPrice = 0.0;
+    private int openOrders = 5;
+    private int decimalPlace = 0;
+    private boolean isStopLossActivated = false;
+    private boolean isBuyOrderFilled = false;
+
+
+    //Buy Order
+    private double buyCoinQuantity = 0.0;
+    private double buyQuantity = 0.0;
+
 
 
     private static enum InitialDiState{
 
+    }
+
+    public static enum BuySellState{
+        NOT_IN_SELL_STATE,
+        SELL_50,
+        SELL_70,
+        SELL_85,
+        SELL_100
     }
 
     public static enum SellRemainderState{
@@ -87,8 +108,6 @@ public class MainActivity extends AppCompatActivity {
     public static HashMap<String, Boolean> symbolBreakoutMap = new HashMap<>();
     public static HashMap<String, Balance> balanceHashMap = new HashMap<>();
     public static HashMap<String, Double> pumpHashMap = new HashMap<>();
-    public static HashMap<String, Integer> symbolQuantDecHashMap = new HashMap<>();
-    public static HashMap<String, Integer> symbolBuyPriceDecHashMap = new HashMap<>();
     public static boolean isFirstScanComplete = false;
     public static boolean isMinusDiGreater = false;
     public static boolean isFirstLaunch = true;
@@ -100,11 +119,15 @@ public class MainActivity extends AppCompatActivity {
     public static Double startMoney = 100.0;
     public static Double startCoin = 0.0;
     public double maxDiDiff = 0.0;
-    public static int limit  = 1000;
+    public static int limit  = 500;
     public static int decimalPlaces  = 0;
     public static Long serverTime = 0L;
     public static String symbol = "BTCUSDT";
-    public static String sellSymbol = "ETC";
+    public static String sellCoin = "ONT";
+    //public static String sellSymbolPair = "ONTUSDT";
+    public static Long currentTS;
+    public static Long midnightUTCTS;
+    Timestamp timestamp = new Timestamp(System.currentTimeMillis());
 
 
     @Override
@@ -114,16 +137,33 @@ public class MainActivity extends AppCompatActivity {
 //        rateTextView = (TextView)this.findViewById(R.id.RatesTextView);
 //        reverseRateTextView = (TextView)this.findViewById(R.id.ReverseRatesTextView);
         breakoutTextView = (TextView)this.findViewById(R.id.BreakoutTextView);
-        Log.d(TAG, "timestamp: " + localToGMT());
+        //Log.d(TAG, "timestamp: " + localToGMT());
 //        rateTextView.setMovementMethod(new ScrollingMovementMethod());
 //        reverseRateTextView.setMovementMethod(new ScrollingMovementMethod());
         breakoutTextView.setMovementMethod(new ScrollingMovementMethod());
+        currentTS = timestamp.getTime();
+        midnightUTCTS = findMidnightUTCTS();
+        Log.d(TAG, "currentTS: " + currentTS);
+        Log.d(TAG, "midnightUTCTS: " + midnightUTCTS);
 
-        symbolQuantDecHashMap.put("BTCUSDT", 6);
-        symbolBuyPriceDecHashMap.put("BTCUSDT", 2);
+//        double testD = 0.12340;
+//        Log.d(TAG, "testD: " + roundDouble(testD, 4));
 
-        new ReversalBandBuySellAsyncTask().execute();
+        new BuySellMonitorAsyncTask().execute();
 //        sendEmail();
+    }
+
+    public long findMidnightUTCTS(){
+        Calendar date = new GregorianCalendar();
+        date.set(Calendar.HOUR_OF_DAY, 0);
+        date.set(Calendar.MINUTE, 0);
+        date.set(Calendar.SECOND, 0);
+        date.set(Calendar.MILLISECOND, 0);
+        //        date.add(Calendar.DAY_OF_MONTH, 1);
+
+        long timeParameter = date.getTimeInMillis();
+
+        return timeParameter;
     }
 
     public static long localToGMT() {
@@ -209,6 +249,7 @@ public class MainActivity extends AppCompatActivity {
         final BuyOrderListener buyOrderListener = new BuyOrderListener() {
             @Override
             public void onSuccess() {
+                Log.d(TAG, "Order Placed");
 
             }
 
@@ -222,63 +263,26 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(HashMap<String, Balance> balanceHashMap) {
                 MainActivity.balanceHashMap = balanceHashMap;
-                Balance usdtBalance = balanceHashMap.get("USDT");
-                usdtCoin = usdtBalance.getFreeCoin();
-                Log.d(TAG, "usdtCoin: " + usdtCoin);
+                Balance sellSymbolBalance = balanceHashMap.get(sellCoin);
+                sellCoinQuantity = 0;
+                sellCoinQuantity = roundDouble(sellSymbolBalance.getFreeCoin(), 2);
+                Log.d(TAG, "sellCoinQuantity: " + sellCoinQuantity);
 
-                int placeOrderIndex = 0;
-                buyOrderQuantityPercentList.clear();
-
-                if ((usdtCoin * 0.2) >= 50) {
-                    Log.d(TAG, "(usdtCoin * 0.1) >= 50");
-                    placeOrderIndex = buyOrderTierList.size();
-                    buyOrderQuantityPercentList.add(0.1);
-                    buyOrderQuantityPercentList.add(0.2);
-                    buyOrderQuantityPercentList.add(0.1);
-//                    buyOrderQuantityPercentList.add(0.2);
-//                    buyOrderQuantityPercentList.add(0.1);
-//                    buyOrderQuantityPercentList.add(0.099);
-
-//                } else if ((usdtCoin * 0.22) >= 10.2){
-//                    Log.d(TAG, "(usdtCoin * 0.22) >= 10.2");
-//                    placeOrderIndex = 3;
-//                    buyOrderQuantityPercentList.add(0.335);
-//                    buyOrderQuantityPercentList.add(0.445);
-//                    buyOrderQuantityPercentList.add(0.22);
-//                } else if ((usdtCoin * 0.435) >= 10.2){
-//                    Log.d(TAG, "(usdtCoin * 0.435) >= 10.2");
-//                    placeOrderIndex = 2;
-//                    buyOrderQuantityPercentList.add(0.435);
-//                    buyOrderQuantityPercentList.add(0.565);
-//                } else if ((usdtCoin >= 10.2)){
-//                    Log.d(TAG, "usdtCoin >= 10.2");
-//                    placeOrderIndex = 1;
-//                    buyOrderQuantityPercentList.add(1.0);
-                } else {
-                    Log.d(TAG, "Not Enough usdt, Do Nothing");
-                    placeOrderIndex = 0;
-                    buyOrderQuantityPercentList.add(0.0);
+                String signature = "";
+                String sellQueryString = getSellQueryString(roundDouble(takeProfitPrice, decimalPlace), sellCoinQuantity);
+                String queryStrSignature = "";
+                try {
+                    signature = orderManager.encode(secretKey, sellQueryString);
+                    queryStrSignature = sellQueryString + "&signature=" + signature;
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
 
-                for (int j = 0; j < placeOrderIndex; j++) {
-                    String signature = "";
-                    buyQuantity = 0.0;
-                    buyQuantity = ((BigDecimal.valueOf(usdtCoin).multiply(BigDecimal.valueOf(buyOrderQuantityPercentList.get(j)))).divide(BigDecimal.valueOf(buyOrderTierList.get(j)), 2, RoundingMode.HALF_DOWN)).doubleValue();
-                    Log.d(TAG, "buyQuantity: " + buyQuantity);
-                    String buyQueryString = getBuyQueryString(buyOrderTierList.get(j), buyQuantity);
-                    String queryStrSignature = "";
-                    try {
-                        signature = orderManager.encode(secretKey, buyQueryString);
-                        queryStrSignature = buyQueryString + "&signature=" + signature;
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-
-                    if (buyPrice != 0.0 || queryStrSignature != "") {
-                        orderManager.sendBuyOrderRequest(buyOrderListener, queryStrSignature);
-                    } else {
-                        Log.d(TAG, "buyOrder buyPrice != 0.0 || queryStrSignature != \"\"");
-                    }
+                if (takeProfitPrice != 0.0 || queryStrSignature != "") {
+                    Log.d(TAG, "TakeProfitOrderPlaced");
+                    orderManager.sendBuyOrderRequest(buyOrderListener, queryStrSignature);
+                } else {
+                    Log.d(TAG, "takeProfitPrice = 0.0 || queryStrSignature = \"\"");
                 }
 
             }
@@ -318,12 +322,48 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
+        final ServerTimeListener serverTimeListener3 = new ServerTimeListener() {
+            @Override
+            public void onSuccess(Long serverTime) {
+                MainActivity.serverTime = serverTime;
+                String signature = "";
+                String stopLossQueryString = "";
+                String queryStrSignature = "";
+
+                if (isBuyOrderFilled) {
+                    try {
+                        sellCoinQuantity = 0;
+                        Balance sellSymbolBalance = balanceHashMap.get(sellCoin);
+                        sellCoinQuantity = roundDouble(sellSymbolBalance.getFreeCoin(), 2);
+                        Log.d(TAG, "sellCoinQuantity: " + sellCoinQuantity);
+                        stopLossQueryString = getStopLostQueryString(sellCoinQuantity);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    try {
+                        signature = orderManager.encode(secretKey, stopLossQueryString);
+                        queryStrSignature = stopLossQueryString + "&signature=" + signature;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    Log.d(TAG, "StopLoss Sell Market Order Placed");
+                    orderManager.sendBuyOrderRequest(buyOrderListener, queryStrSignature);
+                }
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
         final CancelBuyOrderListener cancelBuyOrderListener = new CancelBuyOrderListener() {
             @Override
             public void onSuccess() {
                 cancelBuyOrderOnSuccessCount += 1;
-                if (cancelBuyOrderOnSuccessCount >= cancelBuyOrderIdListLength){
-                    orderManager.sendServerTimeRequest(serverTimeListener2);
+                if (cancelBuySellOrderOnSuccessCount >= cancelOrderIdListLength){
+                    orderManager.sendServerTimeRequest(serverTimeListener3);
                 }
             }
 
@@ -335,16 +375,25 @@ public class MainActivity extends AppCompatActivity {
 
         final OpenOrderListener openOrderListener = new OpenOrderListener() {
             @Override
-            public void onSuccess(List<Long> cancelBuyOrderIdList) {
-                cancelBuyOrderOnSuccessCount = 0;
-                cancelBuyOrderIdListLength = cancelBuyOrderIdList.size();
+            public void onSuccess(List<Long> cancelOrderIdList) {
+                cancelBuySellOrderOnSuccessCount = 0;
+                cancelOrderIdListLength = cancelOrderIdList.size();
 
-                if (cancelBuyOrderIdListLength > 0) {
-                    Log.d(TAG, "cancelBuyOrderIdListLength > 0");
-                    for (Long orderId : cancelBuyOrderIdList) {
+                if (cancelBuyOrderIdListLength < openOrders && currentPrice != 0.0 && openOrders != 0 && !isStopLossActivated) {
+                    isBuyOrderFilled = true;
+                    Log.d(TAG, "cancelBuyOrderIdListLength: " + cancelBuyOrderIdListLength);
+                    openOrders = cancelBuyOrderIdListLength;
+                    orderManager.sendServerTimeRequest(serverTimeListener2);
+                    Log.d(TAG, "openOrders: " + openOrders);
+
+                } else if (currentPrice <= stopLossPrice && !isStopLossActivated){
+                    isStopLossActivated = true;
+                    for (Long orderId : cancelOrderIdList) {
                         String signature = "";
                         String cancelBuyOrderQueryString = getCancelBuyOrderQueryString(orderId);
                         String queryStrSignature = "";
+                        Log.d(TAG, "cancel orderId: " + orderId);
+
                         try {
                             signature = orderManager.encode(secretKey, cancelBuyOrderQueryString);
                             queryStrSignature = cancelBuyOrderQueryString + "&signature=" + signature;
@@ -353,9 +402,6 @@ public class MainActivity extends AppCompatActivity {
                         }
                         orderManager.sendCancelBuyOrderRequest(cancelBuyOrderListener, queryStrSignature);
                     }
-                } else if (cancelBuyOrderIdListLength == 0){
-                    Log.d(TAG, "cancelBuyOrderIdListLength == 0");
-                    cancelBuyOrderListener.onSuccess();
                 }
             }
 
@@ -392,26 +438,31 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        PriceCalculationListener priceCalculationListener = new PriceCalculationListener() {
+//        PriceCalculationListener priceCalculationListener = new PriceCalculationListener() {
+//            @Override
+//            public void onSuccess(double closePrice, int maxDecrement) {
+//                currentPrice = closePrice;
+//                decimalPlace = maxDecrement;
+//                orderManager.sendServerTimeRequest(serverTimeListener1);
+//
+//            }
+//
+//            @Override
+//            public void onFailure(String failureMsg) {
+//
+//            }
+//        };
+//
+//        klinesManager.sendDefaultKlinesRequest(priceCalculationListener, symbol);
+
+    }
+
+    private void placeBuyOrderRequest(String symbol) {
+        final BuyOrderListener buyOrderListener = new BuyOrderListener() {
             @Override
-            public void onSuccess(double sellingPrice, double buyPriceTier1, double buyPriceTier2, double buyPriceTier3) {
-                buyOrderTierList.clear();
-                buyPrice = buyPriceTier1;
-                sellPrice = sellingPrice;
-                Log.d(TAG, "buyPrice: " + buyPrice);
-                buyOrderTier1 = buyPriceTier1;
-                buyOrderTier2 = buyPriceTier2;
-                buyOrderTier3 = buyPriceTier3;
-//                buyOrderTier4 = buyPriceTier4;
-//                buyOrderTier5 = buyPriceTier5;
-//                buyOrderTier5 = buyPriceTier6;
-                buyOrderTierList.add(buyPriceTier1);
-                buyOrderTierList.add(buyPriceTier2);
-                buyOrderTierList.add(buyPriceTier3);
-//                buyOrderTierList.add(buyPriceTier4);
-//                buyOrderTierList.add(buyPriceTier5);
-//                buyOrderTierList.add(buyPriceTier6);
-                orderManager.sendServerTimeRequest(serverTimeListener1);
+            public void onSuccess() {
+                Log.d(TAG, "Order Placed");
+
             }
 
             @Override
@@ -420,99 +471,35 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        klinesManager.sendDefaultKlinesRequest(priceCalculationListener, symbol);
+        final ServerTimeListener serverTimeListener1 = new ServerTimeListener() {
+            @Override
+            public void onSuccess(Long serverTime) {
+                MainActivity.serverTime = serverTime;
+                String signature = "";
+                String buyQueryString = getBuyQueryString(buyPrice, buyCoinQuantity);
+                String queryStrSignature = "";
+                try {
+                    signature = orderManager.encode(secretKey, buyQueryString);
+                    queryStrSignature = buyQueryString + "&signature=" + signature;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
 
+                if (buyPrice != 0.0 || buyCoinQuantity != 0.0 || queryStrSignature != "") {
+                    Log.d(TAG, "TakeProfitOrderPlaced");
+                    orderManager.sendBuyOrderRequest(buyOrderListener, queryStrSignature);
+                } else {
+                    Log.d(TAG, "takeProfitPrice = 0.0 || queryStrSignature = \"\"");
+                }
+            }
 
+            @Override
+            public void onFailure(String failureMsg) {
 
-//        SmaListener smaListener = new SmaListener() {
-//            int symIndex = 0;
-//
-//            @Override
-//            public void onSuccess() {
-//                if ((symIndex + 1) < symbolsList.size()) {
-//                    symIndex += 1;
-//                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
-//                } else {
-////                    List<Double> pumpHashMapValues = new ArrayList<>(pumpHashMap.values());
-////                    Set<String> pumpHashMapKey = pumpHashMap.keySet();
-////                    Collections.sort(pumpHashMapValues);
-////                    for (Double sortedPrice :pumpHashMapValues){
-////                        Log.d(TAG, "sortedPrice: " + sortedPrice);
-////                    }
-////
-////                    breakoutTextViewString = "";
-////
-////                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
-////                        Double value = pumpHashMapValues.get(i);
-////
-////                        for (String key : pumpHashMapKey){
-////                            if (pumpHashMap.get(key).equals(value)){
-////                                breakoutTextViewString += key + " " + value + "\n";
-////                                if (value > 7.0){
-////                                    createNotification("Pump: " + key + " " + value);
-////                                }
-////                                break;
-////                            }
-////                        }
-////                    }
-////
-////                    runOnUiThread(new Runnable() {
-////                        @Override
-////                        public void run() {
-////                            breakoutTextView.setText(breakoutTextViewString);
-////                        }
-////                    });
-////
-////                    pumpHashMap.clear();
-////                    symIndex = 0;
-////                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
-//                }
-//            }
-//
-//            @Override
-//            public void onFailure(String response) {
-//                if ((symIndex + 1) < symbolsList.size()) {
-//                    symIndex += 1;
-//                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
-//                } else {
-////                    List<Double> pumpHashMapValues = new ArrayList<>(pumpHashMap.values());
-////                    Set<String> pumpHashMapKey = pumpHashMap.keySet();
-////                    Collections.sort(pumpHashMapValues);
-////                    for (Double sortedPrice :pumpHashMapValues){
-////                        Log.d(TAG, "sortedPrice: " + sortedPrice);
-////                    }
-////
-////                    breakoutTextViewString = "";
-////
-////                    for(int i = (pumpHashMapValues.size() - 1); i > (pumpHashMapValues.size() - 11); i--){
-////                        Double value = pumpHashMapValues.get(i);
-////
-////                        for (String key : pumpHashMapKey){
-////                            if (pumpHashMap.get(key).equals(value)){
-////                                breakoutTextViewString += key + " " + value + "\n";
-////                                if (value > 9.0){
-////                                    createNotification("Pump: " + key + " " + value);
-////                                }
-////                                break;
-////                            }
-////                        }
-////                    }
-////
-////                    runOnUiThread(new Runnable() {
-////                        @Override
-////                        public void run() {
-////                            breakoutTextView.setText(breakoutTextViewString);
-////                        }
-////                    });
-////
-////                    pumpHashMap.clear();
-////                    symIndex = 0;
-////                    klinesManager.sendDefaultKlinesRequest(this, symbolsList.get(symIndex));
-//                }
-//            }
-//        };
+            }
+        };
 
-//        klinesManager.sendDefaultKlinesRequest(smaListener, symbol);
+        orderManager.sendServerTimeRequest(serverTimeListener1);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -596,15 +583,30 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private String getStopLostQueryString(double sellQuantity) {
+        return "symbol=" + symbol + "&side=SELL&type=MARKET&timeInForce=GTC&quantity=" + sellQuantity + "&recvWindow=5000&timestamp=" + serverTime;
+    }
+
     private String getBuyQueryString(Double buyOrderPrice, double buyQuantity){
-        if (buyPrice != 0.0){
+//        if (buyPrice != 0.0){
 //            return "symbol=" + symbol + "&side=BUY&type=LIMIT&timeInForce=GTC&quantity=" + buyQuantity + "&price=" + buyPrice + "&recvWindow=5000&timestamp=" + serverTime;
             return "symbol=" + symbol + "&side=BUY&type=LIMIT&timeInForce=GTC&quantity=" + buyQuantity + "&price=" + buyOrderPrice + "&recvWindow=5000&timestamp=" + serverTime;
 
-        } else {
-            Log.d(TAG, "getBuyQueryString buyPrice = 0.0");
-            return "";
-        }
+//        } else {
+//            Log.d(TAG, "getBuyQueryString buyPrice = 0.0");
+//            return "";
+//        }
+    }
+
+    private String getSellQueryString(Double sellOrderPrice, double sellQuantity){
+//        if (buyPrice != 0.0){
+//            return "symbol=" + symbol + "&side=BUY&type=LIMIT&timeInForce=GTC&quantity=" + buyQuantity + "&price=" + buyPrice + "&recvWindow=5000&timestamp=" + serverTime;
+            return "symbol=" + symbol + "&side=SELL&type=LIMIT&timeInForce=GTC&quantity=" + sellQuantity + "&price=" + sellOrderPrice + "&recvWindow=5000&timestamp=" + serverTime;
+
+//        } else {
+//            Log.d(TAG, "getBuyQueryString buyPrice = 0.0");
+//            return "";
+//        }
     }
 
     private void sendKlinesRequestTimer() {
@@ -796,60 +798,62 @@ public class MainActivity extends AppCompatActivity {
     public static double roundDouble(double x, int roundTodecimalPlace)
     {
         BigDecimal b = new BigDecimal(Double.toString(x));
-        b = b.setScale(roundTodecimalPlace, BigDecimal.ROUND_HALF_DOWN);
+        b = b.setScale(roundTodecimalPlace, BigDecimal.ROUND_DOWN);
         return b.doubleValue();
     }
 
-    private void checkBuyOrderFilled(){
-        final AccountInfoListener accountInfoListener = new AccountInfoListener() {
-            @Override
-            public void onSuccess(HashMap<String, Balance> balanceHashMap) {
+//    private void checkBuyOrderFilled(){
+//        final AccountInfoListener accountInfoListener = new AccountInfoListener() {
+//            @Override
+//            public void onSuccess(HashMap<String, Balance> balanceHashMap) {
+//
+//            }
+//
+//            @Override
+//            public void onFailure(String failureMsg) {
+//
+//            }
+//        };
+//
+//        final ServerTimeListener serverTimeListener = new ServerTimeListener() {
+//            @Override
+//            public void onSuccess(Long serverTime) {
+//                MainActivity.serverTime = serverTime;
+//                String signature = "";
+//                String accountInfoQueryString = "";
+//                String queryStrSignature = "";
+//
+//                try {
+//                    accountInfoQueryString = getAccountInfoQueryString();
+//                } catch (CustomException e) {
+//                    e.printStackTrace();
+//                }
+//                try {
+//                    signature = orderManager.encode(secretKey, accountInfoQueryString);
+//                    queryStrSignature = accountInfoQueryString + "&signature=" + signature;
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                }
+//
+//                orderManager.sendAccountInfoRequest(accountInfoListener, queryStrSignature);
+//            }
+//
+//            @Override
+//            public void onFailure(String failureMsg) {
+//
+//            }
+//        };
+//
+//        orderManager.sendServerTimeRequest(serverTimeListener);
+//    }
 
-            }
-
-            @Override
-            public void onFailure(String failureMsg) {
-
-            }
-        };
-
-        final ServerTimeListener serverTimeListener = new ServerTimeListener() {
-            @Override
-            public void onSuccess(Long serverTime) {
-                MainActivity.serverTime = serverTime;
-                String signature = "";
-                String accountInfoQueryString = "";
-                String queryStrSignature = "";
-
-                try {
-                    accountInfoQueryString = getAccountInfoQueryString();
-                } catch (CustomException e) {
-                    e.printStackTrace();
-                }
-                try {
-                    signature = orderManager.encode(secretKey, accountInfoQueryString);
-                    queryStrSignature = accountInfoQueryString + "&signature=" + signature;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-                orderManager.sendAccountInfoRequest(accountInfoListener, queryStrSignature);
-            }
-
-            @Override
-            public void onFailure(String failureMsg) {
-
-            }
-        };
-
-        orderManager.sendServerTimeRequest(serverTimeListener);
-    }
-
-    private class ReversalBandBuySellAsyncTask extends AsyncTask<Void, Void, Void> {
+    private class BuySellMonitorAsyncTask extends AsyncTask<Void, Void, Void> {
 
         @Override
         protected Void doInBackground(Void... voids) {
-            sendDefKlinesRequest(symbol);
+//            placeBuyOrderRequest(symbol);
+//            sendDefKlinesRequest(symbol);
+            calculateVolumeProfile(symbol);
             //sendGetSymbolsRequest();
             return null;
         }
@@ -861,20 +865,70 @@ public class MainActivity extends AppCompatActivity {
         protected void onProgressUpdate(Void... values) {}
     }
 
-    private class SellOrderCheckerAsyncTask extends AsyncTask<Void, Void, Void> {
+    private void calculateVolumeProfile(final String symbol) {
+        final VolProfileListener volProfileListener = new VolProfileListener() {
+            @Override
+            public void onSuccess() {
 
-        @Override
-        protected Void doInBackground(Void... voids) {
-            checkBuyOrderFilled();
-            return null;
-        }
+            }
 
-        @Override
-        protected void onPreExecute() {}
+            @Override
+            public void onFailure(String failureMsg) {
 
-        @Override
-        protected void onProgressUpdate(Void... values) {}
+            }
+        };
+
+        final HistTradeListener histTradeListener = new HistTradeListener() {
+            @Override
+            public void onSuccess(ArrayList<Long> timestampArrayList, ArrayList<Double> volumeArrayList, ArrayList<Double> priceArrayList, ArrayList<Long> idArrayList) {
+                Log.d(TAG, "histTradeListener onSuccess");
+
+            }
+
+            @Override
+            public void onResendNextRequest(Long requestId) {
+                Log.d(TAG, "histTradeListener onResendNextRequest");
+                klinesManager.sendHistoricalTradeRequest(this, symbol, requestId);
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
+        PriceCalculationListener priceCalculationListener = new PriceCalculationListener() {
+            @Override
+            public void onSuccess(double maxPrice, double minPrice) {
+                klinesManager.sendHistoricalTradeRequest(histTradeListener, symbol, 0L);
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
+
+        klinesManager.sendDefaultKlinesRequest(priceCalculationListener, symbol);
     }
+
+
+
+//    private class SellOrderCheckerAsyncTask extends AsyncTask<Void, Void, Void> {
+//
+//        @Override
+//        protected Void doInBackground(Void... voids) {
+//            checkBuyOrderFilled();
+//            return null;
+//        }
+//
+//        @Override
+//        protected void onPreExecute() {}
+//
+//        @Override
+//        protected void onProgressUpdate(Void... values) {}
+//    }
 }
 
 class CustomException extends Exception

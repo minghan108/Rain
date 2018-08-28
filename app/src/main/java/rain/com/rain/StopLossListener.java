@@ -2,8 +2,8 @@ package rain.com.rain;
 
 import java.util.List;
 
-public interface OpenOrderListener {
-    void onSuccess(List<Long> cancelOrderIdList);
+public interface StopLossListener {
+    void onSuccess();
 
     void onFailure(String failureMsg);
 }

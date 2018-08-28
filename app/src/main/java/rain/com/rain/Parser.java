@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static rain.com.rain.MainActivity.midnightUTCTS;
 import static rain.com.rain.MainActivity.symbolBreakoutMap;
 
 /**
@@ -43,6 +44,10 @@ public class Parser {
     private SimpleMovingAverageExample simpleSMA = new SimpleMovingAverageExample();
     private AdxDmModel adxDmModel = new AdxDmModel();
     private HashMap<String, Balance> balanceHashMap = new HashMap<>();
+    private ArrayList<Double> volumeArrayList = new ArrayList<>();
+    private ArrayList<Double> priceArrayList = new ArrayList<>();
+    private ArrayList<Long> idArrayList = new ArrayList<>();
+    private ArrayList<Long> timestampArrayList = new ArrayList<>();
 
 
     public rain.com.rain.SortedMap parseCurrentPriceJsonResponse(String response) throws IOException {
@@ -226,7 +231,11 @@ public class Parser {
         //adxDmModel.calculateReversalBand(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
         //adxDmModel.calculateReversalBandOptimization(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
         //adxDmModel.calculateLowerEmaOptimization(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
-        adxDmModel.calculateLowerEma(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
+        //adxDmModel.calculateLowerEma(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
+        //adxDmModel.calculateVolumeProfile(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
+        adxDmModel.calculateRange(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
+        //adxDmModel.monitorCurrentPrice(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
+        //adxDmModel.monitorCurrentPrice(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
         //adxDmModel.calculateUpperEmaOptimization(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray, volumePricePrimArray, priceCalculationListener, symbol);
         //adxDmModel.calculateHeikinAshiCandle(highPricePrimArray, lowPricePrimArray, openPricePrimArray, closePricePrimArray);
 
@@ -358,8 +367,8 @@ public class Parser {
 
     }
 
-    public List<Long> parseCheckOpenOrderResponse(String response, OpenOrderListener openOrderListener) {
-        List<Long> cancelBuyOrderIdList = new ArrayList<>();
+    public void parseCheckOpenOrderResponse(String response, OpenOrderListener openOrderListener) {
+        List<Long> cancelOrderIdList = new ArrayList<>();
         JSONArray jsonArray = null;
         try {
             jsonArray = new JSONArray(response);
@@ -372,7 +381,13 @@ public class Parser {
             try {
                 String side = jsonArray.getJSONObject(i).optString("side");
                 if (side.equalsIgnoreCase("BUY")){
-                    cancelBuyOrderIdList.add(jsonArray.getJSONObject(i).optLong("orderId"));
+                    Long buyOrderId = jsonArray.getJSONObject(i).optLong("orderId");
+                    Log.d(TAG, "buyOrderId: " + buyOrderId);
+                    cancelOrderIdList.add(buyOrderId);
+                } else if (side.equalsIgnoreCase("SELL")){
+                    Long sellOrderId = jsonArray.getJSONObject(i).optLong("orderId");
+                    Log.d(TAG, "sellOrderId: " + sellOrderId);
+                    cancelOrderIdList.add(sellOrderId);
                 }
 
             } catch (JSONException e) {
@@ -380,7 +395,68 @@ public class Parser {
             }
         }
 
-        return cancelBuyOrderIdList;
+        openOrderListener.onSuccess(cancelOrderIdList);
+    }
+
+    public void parseHistTradeJsonResponse(String response, HistTradeListener histTradeListener) {
+        Long startId = 0L;
+        Long requestId = 0L;
+        Long startTime = 0L;
+        boolean isMidnightUTCTSReached = false;
+        JSONArray jsonArray = null;
+        try {
+            jsonArray = new JSONArray(response);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            startId = jsonArray.getJSONObject(0).optLong("a");
+            startTime = jsonArray.getJSONObject(0).optLong("T");
+
+            requestId = startId - 1000L;
+            Log.d(TAG, "startId: " + startId);
+            Log.d(TAG, "requestId: " + requestId);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        Log.d(TAG, "startTime: " + startTime);
+        Log.d(TAG, "midnightUTCTS: " + midnightUTCTS);
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+
+            try {
+                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                Long time = jsonObject1.optLong("T");
+
+
+
+                if (time >= midnightUTCTS) {
+                    Double qty = jsonObject1.optDouble("q");
+                    Double price = jsonObject1.optDouble("p");
+                    Long id = jsonObject1.optLong("a");
+                    timestampArrayList.add(time);
+                    volumeArrayList.add(qty);
+                    idArrayList.add(id);
+                    priceArrayList.add(price);
+                } else {
+                    isMidnightUTCTSReached = true;
+                    break;
+                }
+
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (isMidnightUTCTSReached){
+//            histTradeListener.onSuccess(timestampArrayList, volumeArrayList, priceArrayList, idArrayList);
+            adxDmModel.calculateVolumeProfile(timestampArrayList, volumeArrayList, priceArrayList, idArrayList);
+        } else {
+            histTradeListener.onResendNextRequest(requestId);
+        }
     }
 }
 
