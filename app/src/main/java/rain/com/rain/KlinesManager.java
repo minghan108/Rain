@@ -246,4 +246,46 @@ public class KlinesManager {
         Log.d(TAG, "handleOnFailure" + response);
         histTradeListener.onFailure(response);
     }
+
+    public void sendCurrentPriceRequest(final CurPriceListener curPriceListener, final String symbol) {
+        SafeThread sendGetAllPlayableContentRequestThread = new SafeThread("sendGetAllPlayableContentRequestThread") {
+            @Override
+            protected void runSafe() {
+                CurPriceListener listener = curPriceListener;
+                final Semaphore sem = new Semaphore();
+                sem.sem_open();
+                OnOkhttpProcessFinish httpListener = new OnOkhttpProcessFinish() {
+                    @Override
+                    public void onHttpEvent(String response) {
+                        Log.d(TAG, "sendGetAllPlayableContentRequest onSuccess");
+                        handleCurPriceResponseFromServer(response, curPriceListener, symbol);
+                        sem.sem_post();
+                    }
+
+                    @Override
+                    public void onHttpFailure(String response) {
+                        Log.d(TAG, "sendGetAllPlayableContentRequest onFailure");
+                        handleOnFailure(response, curPriceListener);
+                        sem.sem_post();
+                    }
+                };
+                (new OkHttpConnection()).getResponse(getCurPriceUrl(symbol), httpListener, "", "GET");
+                sem.sem_wait();
+            }
+        };
+
+        sendGetAllPlayableContentRequestThread.start();
+    }
+
+    private String getCurPriceUrl(String symbol){
+        return "https://api.binance.com/api/v1/klines?symbol=" + symbol + "&interval=1m&limit=1";
+    }
+
+    private void handleCurPriceResponseFromServer(String response, CurPriceListener curPriceListener, String symbol) {
+        parser.parseCurPriceJsonResponse(response, curPriceListener);
+    }
+
+
+    private void handleOnFailure(String response, CurPriceListener curPriceListener) {
+    }
 }

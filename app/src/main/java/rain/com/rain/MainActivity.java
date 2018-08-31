@@ -18,6 +18,7 @@ import android.util.Log;
 import android.widget.TextView;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -67,6 +68,21 @@ public class MainActivity extends AppCompatActivity {
     private int decimalPlace = 0;
     private boolean isStopLossActivated = false;
     private boolean isBuyOrderFilled = false;
+    private boolean isBuyOrderPlaced = false;
+    private boolean isSellOrderFilled = false;
+    private boolean isSellOrderPlaced = false;
+    private double vahPrice = 0.0;
+    private double valPrice = 0.0;
+    private double pocPrice = 0.0;
+    private int priceDecimalPlace = 0;
+
+    private enum POCOrderState{
+        READY_TO_PLACE_BUY_ORDER,
+        BUY_ORDER_PLACED,
+        BUY_ORDER_FILLED,
+        SELL_ORDER_PLACED,
+        SELL_ORDER_FILLED
+    }
 
 
     //Buy Order
@@ -127,6 +143,7 @@ public class MainActivity extends AppCompatActivity {
     //public static String sellSymbolPair = "ONTUSDT";
     public static Long currentTS;
     public static Long midnightUTCTS;
+    public static POCOrderState pocOrderState = POCOrderState.READY_TO_PLACE_BUY_ORDER;
     Timestamp timestamp = new Timestamp(System.currentTimeMillis());
 
 
@@ -457,16 +474,17 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void placeBuyOrderRequest(String symbol) {
+    private void placeBuyOrderRequest(final double pocPrice) {
         final BuyOrderListener buyOrderListener = new BuyOrderListener() {
             @Override
             public void onSuccess() {
-                Log.d(TAG, "Order Placed");
-
+                Log.d(TAG, "POC Order Placed");
+                pocOrderState = POCOrderState.BUY_ORDER_PLACED;
             }
 
             @Override
             public void onFailure(String failureMsg) {
+                Log.d(TAG, "buyOrderListener onFailure");
 
             }
         };
@@ -475,8 +493,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(Long serverTime) {
                 MainActivity.serverTime = serverTime;
+                double buyQuantity = roundDouble(BigDecimal.valueOf(100).divide(BigDecimal.valueOf(pocPrice), 9, RoundingMode.DOWN).doubleValue(), 2);
                 String signature = "";
-                String buyQueryString = getBuyQueryString(buyPrice, buyCoinQuantity);
+                String buyQueryString = getBuyQueryString(roundDouble(pocPrice, priceDecimalPlace), buyQuantity);
                 String queryStrSignature = "";
                 try {
                     signature = orderManager.encode(secretKey, buyQueryString);
@@ -485,16 +504,17 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
 
-                if (buyPrice != 0.0 || buyCoinQuantity != 0.0 || queryStrSignature != "") {
-                    Log.d(TAG, "TakeProfitOrderPlaced");
+                if (pocPrice != 0.0 || buyQuantity != 0.0 || queryStrSignature != "") {
+                    Log.d(TAG, "POCOrderPlaced");
                     orderManager.sendBuyOrderRequest(buyOrderListener, queryStrSignature);
                 } else {
-                    Log.d(TAG, "takeProfitPrice = 0.0 || queryStrSignature = \"\"");
+                    Log.d(TAG, "pocPrice = 0.0 || queryStrSignature = \"\"");
                 }
             }
 
             @Override
             public void onFailure(String failureMsg) {
+                Log.d(TAG, "serverTimeListener1 onFailure");
 
             }
         };
@@ -880,9 +900,12 @@ public class MainActivity extends AppCompatActivity {
 
         final HistTradeListener histTradeListener = new HistTradeListener() {
             @Override
-            public void onSuccess(ArrayList<Long> timestampArrayList, ArrayList<Double> volumeArrayList, ArrayList<Double> priceArrayList, ArrayList<Long> idArrayList) {
+            public void onSuccess(double valueAreaHighPrice, double valueAreaLowPrice, double poc, int maxDecrement) {
                 Log.d(TAG, "histTradeListener onSuccess");
-
+                vahPrice = valueAreaHighPrice;
+                valPrice = valueAreaLowPrice;
+                pocPrice = poc;
+                priceDecimalPlace = maxDecrement;
             }
 
             @Override
@@ -915,20 +938,156 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-//    private class SellOrderCheckerAsyncTask extends AsyncTask<Void, Void, Void> {
-//
-//        @Override
-//        protected Void doInBackground(Void... voids) {
-//            checkBuyOrderFilled();
-//            return null;
-//        }
-//
-//        @Override
-//        protected void onPreExecute() {}
-//
-//        @Override
-//        protected void onProgressUpdate(Void... values) {}
-//    }
+    private class POCOrderMonitorAsyncTask extends AsyncTask<Void, Void, Void> {
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            priceAbovePocChecker();
+            return null;
+        }
+
+        @Override
+        protected void onPreExecute() {}
+
+        @Override
+        protected void onProgressUpdate(Void... values) {}
+    }
+
+    private void priceAbovePocChecker() {
+        CurPriceListener curPriceListener = new CurPriceListener() {
+            @Override
+            public void onSuccess(double curPrice) {
+                if (curPrice > pocPrice && pocOrderState == POCOrderState.READY_TO_PLACE_BUY_ORDER){
+                    placeBuyOrderRequest(pocPrice);
+                } else if (pocOrderState == POCOrderState.BUY_ORDER_PLACED){
+                    checkBuyOrderFilledRequest();
+                } else if (pocOrderState == POCOrderState.BUY_ORDER_FILLED){
+                    placeSellOrderRequest(pocPrice);
+                } else if (pocOrderState == POCOrderState.SELL_ORDER_PLACED){
+                    
+                }
+            }
+
+            @Override
+            public void onFailure(String failMessage) {
+
+            }
+        };
+
+        klinesManager.sendCurrentPriceRequest(curPriceListener, symbol);
+    }
+
+    private void placeSellOrderRequest(final double pocPrice) {
+        final AccountInfoListener accountInfoListener = new AccountInfoListener() {
+            @Override
+            public void onSuccess(HashMap<String, Balance> balanceHashMap) {
+                double pocSellPrice = BigDecimal.valueOf(pocPrice).multiply(BigDecimal.valueOf(1.003)).doubleValue();
+                MainActivity.balanceHashMap = balanceHashMap;
+                Balance sellSymbolBalance = balanceHashMap.get(sellCoin);
+                sellCoinQuantity = 0;
+                sellCoinQuantity = roundDouble(sellSymbolBalance.getFreeCoin(), 2);
+                Log.d(TAG, "sellCoinQuantity: " + sellCoinQuantity);
+
+                String signature = "";
+                String sellQueryString = getSellQueryString(roundDouble(pocSellPrice, priceDecimalPlace), sellCoinQuantity);
+                String queryStrSignature = "";
+                try {
+                    signature = orderManager.encode(secretKey, sellQueryString);
+                    queryStrSignature = sellQueryString + "&signature=" + signature;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                if (takeProfitPrice != 0.0 || queryStrSignature != "") {
+                    Log.d(TAG, "TakeProfitOrderPlaced");
+                    orderManager.sendBuyOrderRequest(buyOrderListener, queryStrSignature);
+                } else {
+                    Log.d(TAG, "takeProfitPrice = 0.0 || queryStrSignature = \"\"");
+                }
+
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+                Log.d(TAG, "accountInfo onFailure" + failureMsg);
+            }
+        };
+
+        final ServerTimeListener serverTimeListener1 = new ServerTimeListener() {
+            @Override
+            public void onSuccess(Long serverTime) {
+                MainActivity.serverTime = serverTime;
+                String signature = "";
+                String accountInfoQueryString = "";
+                String queryStrSignature = "";
+
+                try {
+                    accountInfoQueryString = getAccountInfoQueryString();
+                } catch (CustomException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    signature = orderManager.encode(secretKey, accountInfoQueryString);
+                    queryStrSignature = accountInfoQueryString + "&signature=" + signature;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                orderManager.sendAccountInfoRequest(accountInfoListener, queryStrSignature);
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
+        orderManager.sendServerTimeRequest(serverTimeListener1);
+    }
+
+    private void checkBuyOrderFilledRequest() {
+        final OpenOrderListener openOrderListener = new OpenOrderListener() {
+            @Override
+            public void onSuccess(List<Long> cancelOrderIdList) {
+                cancelBuySellOrderOnSuccessCount = 0;
+                cancelOrderIdListLength = cancelOrderIdList.size();
+
+                if (cancelOrderIdListLength < 1){
+                    pocOrderState = POCOrderState.BUY_ORDER_FILLED;
+                }
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
+        final ServerTimeListener serverTimeListener1 = new ServerTimeListener() {
+            @Override
+            public void onSuccess(Long serverTime) {
+                MainActivity.serverTime = serverTime;
+                String signature = "";
+                String openOrderQueryString = getOpenOrderQueryString();
+                String queryStrSignature = "";
+                try {
+                    signature = orderManager.encode(secretKey, openOrderQueryString);
+                    queryStrSignature = openOrderQueryString + "&signature=" + signature;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                orderManager.sendCheckOpenOrderRequest(openOrderListener, queryStrSignature);
+            }
+
+            @Override
+            public void onFailure(String failureMsg) {
+
+            }
+        };
+
+        orderManager.sendServerTimeRequest(serverTimeListener1);
+    }
 }
 
 class CustomException extends Exception

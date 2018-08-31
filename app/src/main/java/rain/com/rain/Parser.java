@@ -197,6 +197,20 @@ public class Parser {
 
     }
 
+    public void parseCurPriceJsonResponse(String response, CurPriceListener curPriceListener){
+        Double curPrice = 0.0;
+        try {
+            JSONArray jsonArray = new JSONArray(response);
+            Log.d(TAG, "curPrice jsonArray length: " + jsonArray.length());
+                curPrice = Double.parseDouble(jsonArray.getJSONArray(jsonArray.length() - 1).get(4).toString());
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        curPriceListener.onSuccess(curPrice);
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.N)
     private void calculateSma(String symbol, PriceCalculationListener priceCalculationListener) {
         Log.d(TAG, "calculateSma");
@@ -384,11 +398,12 @@ public class Parser {
                     Long buyOrderId = jsonArray.getJSONObject(i).optLong("orderId");
                     Log.d(TAG, "buyOrderId: " + buyOrderId);
                     cancelOrderIdList.add(buyOrderId);
-                } else if (side.equalsIgnoreCase("SELL")){
-                    Long sellOrderId = jsonArray.getJSONObject(i).optLong("orderId");
-                    Log.d(TAG, "sellOrderId: " + sellOrderId);
-                    cancelOrderIdList.add(sellOrderId);
                 }
+//                else if (side.equalsIgnoreCase("SELL")){
+//                    Long sellOrderId = jsonArray.getJSONObject(i).optLong("orderId");
+//                    Log.d(TAG, "sellOrderId: " + sellOrderId);
+//                    cancelOrderIdList.add(sellOrderId);
+//                }
 
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -453,7 +468,7 @@ public class Parser {
 
         if (isMidnightUTCTSReached){
 //            histTradeListener.onSuccess(timestampArrayList, volumeArrayList, priceArrayList, idArrayList);
-            adxDmModel.calculateVolumeProfile(timestampArrayList, volumeArrayList, priceArrayList, idArrayList);
+            adxDmModel.calculateVolumeProfile(timestampArrayList, volumeArrayList, priceArrayList, idArrayList, histTradeListener);
         } else {
             histTradeListener.onResendNextRequest(requestId);
         }

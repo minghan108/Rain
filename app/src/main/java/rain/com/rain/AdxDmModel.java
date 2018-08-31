@@ -921,13 +921,15 @@ public class AdxDmModel {
     }
 
 //    public void calculateVolumeProfile(double[] highPrice, double[] lowPrice, double[] openPrice, double[] closePrice, double[] volume, PriceCalculationListener priceCalculationListener, String symbol) {
-    public void calculateVolumeProfile(ArrayList<Long> timestampArrayList, ArrayList<Double> volumeArrayList, ArrayList<Double> priceArrayList, ArrayList<Long> idArrayList) {
+    public void calculateVolumeProfile(ArrayList<Long> timestampArrayList, ArrayList<Double> volumeArrayList, ArrayList<Double> priceArrayList, ArrayList<Long> idArrayList, HistTradeListener histTradeListener) {
         HashMap<Double, Double> volumePriceHM = new HashMap<>();
         ArrayList<Double> keySetArrayList = new ArrayList<>();
         int volumeIndex = 0;
         double poc = 0.0;
+        double totalVolume = 0.0;
         double pocPrice = 0.0;
         int pocKey = 0;
+        int maxDecrement = findDecimalPlaces(priceArrayList);
 
         Core core = new Core();
         MInteger begin = new MInteger();
@@ -935,7 +937,6 @@ public class AdxDmModel {
 
         double intervalPrice = minPrice;
         BigDecimal minPriceBD = BigDecimal.valueOf(minPrice);
-
         keySetArrayList.add(minPrice);
 
         BigDecimal intervalBD = (BigDecimal.valueOf(maxPrice).subtract(BigDecimal.valueOf(minPrice))).divide(BigDecimal.valueOf(240), 9, RoundingMode.HALF_UP);
@@ -966,10 +967,12 @@ public class AdxDmModel {
 
             for (int k = (int)index; k < 241; k++) {
                 Log.d(TAG, "k: " + k);
+                BigDecimal volumeElementBD = BigDecimal.valueOf(volumeArrayList.get(volumeIndex));
+                totalVolume = BigDecimal.valueOf(totalVolume).add(volumeElementBD).doubleValue();
                 //if (inRange(keySetArrayList.get(k), keySetArrayList.get(k - 1), price)){
                 if (price < keySetArrayList.get(k) && price >= keySetArrayList.get(k - 1)){
                     BigDecimal prevVolumeBD = BigDecimal.valueOf(volumePriceHM.get(keySetArrayList.get(k)));
-                    double curVolume = prevVolumeBD.add(BigDecimal.valueOf(volumeArrayList.get(volumeIndex))).doubleValue();
+                    double curVolume = prevVolumeBD.add(volumeElementBD).doubleValue();
                     volumePriceHM.put(keySetArrayList.get(k), curVolume);
 
                     if (poc < curVolume){
@@ -989,7 +992,68 @@ public class AdxDmModel {
         Log.d(TAG, "pocPrice: " + pocPrice);
         Log.d(TAG, "pocPriceVolume: " + volumePriceHM.get(pocPrice));
 
+        calculateValueArea(keySetArrayList, pocKey, pocPrice, volumePriceHM, totalVolume, histTradeListener, maxDecrement);
+    }
 
+    private void calculateValueArea(ArrayList<Double> keySetArrayList, int pocKey, double pocPrice, HashMap<Double, Double> volumePriceHM, double totalVolume, HistTradeListener histTradeListener, int maxDecrement) {
+        double volumeCap = BigDecimal.valueOf(0.7).multiply(BigDecimal.valueOf(totalVolume)).doubleValue();
+        double volumeCounter = volumePriceHM.get(keySetArrayList.get(pocKey));
+        double valueAreaHighVolume = 0.0;
+        double valueAreaLowVolume = 0.0;
+        int valueAreaLowIndex = pocKey;
+        int valueAreaHighIndex = pocKey;
+        double valueAreaHighPrice = 0.0;
+        double valueAreaLowPrice = 0.0;
+
+
+        while(volumeCounter < volumeCap){
+            if ((valueAreaHighIndex + 2) > 241 && (valueAreaLowIndex - 2) > 0) {
+                valueAreaLowVolume = BigDecimal.valueOf(volumePriceHM.get(keySetArrayList.get(valueAreaLowIndex - 1))).add(BigDecimal.valueOf(volumePriceHM.get(keySetArrayList.get(valueAreaLowIndex - 2)))).doubleValue();
+                volumeCounter = BigDecimal.valueOf(volumeCounter).add(BigDecimal.valueOf(valueAreaLowVolume)).doubleValue();
+                valueAreaLowIndex -= 2;
+            } else if ((valueAreaLowIndex - 2) < 0 && (valueAreaHighIndex + 2) < 241){
+                valueAreaHighVolume = BigDecimal.valueOf(volumePriceHM.get(keySetArrayList.get(valueAreaHighIndex + 1))).add(BigDecimal.valueOf(volumePriceHM.get(keySetArrayList.get(valueAreaHighIndex + 2)))).doubleValue();
+                volumeCounter = BigDecimal.valueOf(volumeCounter).add(BigDecimal.valueOf(valueAreaHighVolume)).doubleValue();
+                valueAreaHighIndex += 2;
+            } else if ((valueAreaLowIndex - 2) > 0 && (valueAreaHighIndex + 2) < 241){
+                valueAreaHighVolume = BigDecimal.valueOf(volumePriceHM.get(keySetArrayList.get(valueAreaHighIndex + 1))).add(BigDecimal.valueOf(volumePriceHM.get(keySetArrayList.get(valueAreaHighIndex + 2)))).doubleValue();
+                valueAreaLowVolume = BigDecimal.valueOf(volumePriceHM.get(keySetArrayList.get(valueAreaLowIndex - 1))).add(BigDecimal.valueOf(volumePriceHM.get(keySetArrayList.get(valueAreaLowIndex - 2)))).doubleValue();
+
+                if (valueAreaHighVolume >= valueAreaLowVolume){
+                    volumeCounter = BigDecimal.valueOf(volumeCounter).add(BigDecimal.valueOf(valueAreaHighVolume)).doubleValue();
+                    valueAreaHighIndex += 2;
+                } else {
+                    volumeCounter = BigDecimal.valueOf(volumeCounter).add(BigDecimal.valueOf(valueAreaLowVolume)).doubleValue();
+                    valueAreaLowIndex -= 2;
+                }
+            }
+        }
+
+        valueAreaHighPrice = keySetArrayList.get(valueAreaHighIndex);
+        valueAreaLowPrice = keySetArrayList.get(valueAreaLowIndex);
+        Log.d(TAG, "valueAreaHighIndex: " + valueAreaHighIndex);
+        Log.d(TAG, "valueAreaLowIndex: " + valueAreaLowIndex);
+        Log.d(TAG, "valueAreaHighPrice: " + valueAreaHighPrice);
+        Log.d(TAG, "valueAreaLowPrice: " + valueAreaLowPrice);
+
+        histTradeListener.onSuccess(valueAreaHighPrice, valueAreaLowPrice, pocPrice, maxDecrement);
+    }
+
+    private int findDecimalPlaces(ArrayList<Double> closePriceArrayList){
+        int maxDecimalPlace = 0;
+
+
+        for (int index = closePriceArrayList.size() - 100; index < closePriceArrayList.size(); index++){
+            String text = Double.toString(Math.abs(closePriceArrayList.get(index)));
+            int integerPlaces = text.indexOf('.');
+            int decimalPlace = text.length() - integerPlaces;
+
+            if (maxDecimalPlace < decimalPlace){
+                maxDecimalPlace = (decimalPlace - 1);
+            }
+        }
+
+        return maxDecimalPlace;
     }
 
     private boolean inRange(double high, double low, double x){
